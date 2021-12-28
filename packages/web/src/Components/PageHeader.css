@@ -1,0 +1,14 @@
+.page__header {
+  position: sticky;
+  top: 0;
+
+  box-shadow: 0 1px 1px var(--secondary);
+
+  background-color: white;
+}
+
+.page__header .container {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+}

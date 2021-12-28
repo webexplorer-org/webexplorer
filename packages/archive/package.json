@@ -1,0 +1,25 @@
+{
+  "name": "@webexplorer/archive",
+  "version": "0.1.0",
+  "description": "libarchive ported to wasm",
+  "main": "src/index.js",
+  "scripts": {
+    "build:wasm": "./scripts/wasm.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/exploreronweb/webexplorer.git"
+  },
+  "keywords": [
+    "Archive",
+    "Wasm",
+    "Zip",
+    "Rar"
+  ],
+  "author": "Ji Chang",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/exploreronweb/webexplorer/issues"
+  },
+  "homepage": "https://github.com/exploreronweb/webexplorer#readme"
+}

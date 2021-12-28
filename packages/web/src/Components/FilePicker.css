@@ -1,0 +1,35 @@
+.filepicker {
+  position: relative;
+
+  cursor: pointer;
+}
+
+.filepicker input {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
+  opacity: 0;
+  cursor: pointer;
+}
+
+.filepicker label {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+
+  color: white;
+
+  cursor: pointer;
+  border-radius: 0.25rem;
+
+  background-color: var(--primary);
+}
+
+.filepicker input:focus + label,
+.filepicker:hover label {
+  box-shadow: 0 0 0.125rem var(--primary);
+  background-color: var(--focus);
+}
