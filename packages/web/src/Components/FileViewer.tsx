@@ -1,8 +1,10 @@
-import { Suspense } from "react";
-import { Mime } from "../Mime";
+import React, { Suspense } from "react";
+import { Mime } from "../Utils/Mime";
 import "./FileViewer.css";
 import { Loading } from "./Loading";
-import { PdfViewer } from "./PdfViewer";
+
+const PdfViewer = React.lazy(() => import("./PdfViewer"));
+const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
 
 export interface FileViewerProps {
   file: File | null;
@@ -19,6 +21,9 @@ export function FileViewer(props: FileViewerProps) {
   switch (file.type) {
     case Mime.PDF:
       viewer = <PdfViewer file={file} />;
+      break;
+    case Mime.ZIP:
+      viewer = <ArchiveViewer file={file} />;
       break;
     default:
       viewer = <div>Unsupported File</div>;

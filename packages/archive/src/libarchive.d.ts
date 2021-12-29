@@ -1,6 +1,6 @@
 import type { EmscriptenModuleFactory, EmscriptenModule } from "emscripten";
 
-class ArchiveModule {
+export interface ArchiveModule extends EmscriptenModule {
   _get_version: () => string;
   _archive_open: () => void;
   _get_next_entry: () => void;
@@ -17,6 +17,6 @@ class ArchiveModule {
   _archive_read_add_passphrase: () => void;
 }
 
-const libarchive: EmscriptenModuleFactory<ArchiveModule | EmscriptenModule>;
+const libarchive: EmscriptenModuleFactory<ArchiveModule>;
 
 export default libarchive;

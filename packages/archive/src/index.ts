@@ -1,5 +1,5 @@
-import libarchive from "./libarchive";
-// @ts-ignore
-import * as wasm from "./libarchive.wasm";
+import libarchive, { ArchiveModule } from "./libarchive";
 
 export { libarchive };
+
+export type { ArchiveModule };
