@@ -1,4 +1,6 @@
-emcc ./main.c -I /usr/local/include/ -o ../src/main.o #-g4
+ls /opt/libarchive-3.5.2/libarchive
+
+emcc ./main.c -I /usr/local/include/ -I /opt/libarchive-3.5.2/libarchive -o ../src/main.o #-g4
 
 emcc ../src/main.o /opt/xz-5.2.5/liblzma.a /opt/libarchive-3.5.2/libarchive.a /opt/opensso-OpenSSL_1_1_1m/libssl.a /opt/opensso-OpenSSL_1_1_1m/libcrypto.a \
     -o ../src/libarchive.js \

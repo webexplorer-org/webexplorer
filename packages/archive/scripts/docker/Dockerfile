@@ -15,7 +15,7 @@ RUN unzip /opt/libarchive-3.5.2.zip && rm /opt/libarchive-3.5.2.zip && \
     unzip /opt/OpenSSL_1_1_1m.zip  && rm /opt/OpenSSL_1_1_1m.zip
 
 RUN apt-get update && \
-    apt-get install -y locate vim file autoconf libtool gettext cmake
+    apt-get install -y autoconf libtool gettext cmake
 
 ENV CPPFLAGS "-I/usr/local/include/ -I/opt/zlib-1.2.11 -I/opt/bzip2-master -I/opt/libarchive-3.5.2 -I/opt/openssl-OpenSSL_1_1_1m/include -I/opt/openssl-OpenSSL_1_1_1m/test"
 ENV LDLIBS "-lz -lbz2 -lssl -lcrypto"
@@ -30,9 +30,8 @@ RUN cd /opt/zlib-1.2.11 && \
 # compile BZIP2 to LLVM
 WORKDIR /opt/bzip2-master
 RUN cd /opt/bzip2-master  && \
-    echo "set(CMAKE_MODULE_PATH \"${CMAKE_MODULE_PATH};/emsdk_portable/sdk/cmake/Modules\")" >| CMakeLists.txt && \
-    emcmake cmake . -DENABLE_STATIC_LIB=ON && \
-    emmake make 2>&1 && \
+    emcmake cmake . -DENABLE_STATIC_LIB=1 -DENABLE_SHARED_LIB=0 -DENABLE_LIB_ONLY=1 && \
+    cmake --build . --config Release 2>&1 && \
     ls -l
 
 # compile openSSL to LLVM
@@ -45,7 +44,7 @@ RUN cd /opt/openssl-OpenSSL_1_1_1m && \
 # compile LZMA to LLVM
 WORKDIR /opt/xz-5.2.5
 RUN cd /opt/xz-5.2.5 && \
-    echo "set(CMAKE_MODULE_PATH \"${CMAKE_MODULE_PATH};/emsdk_portable/sdk/cmake/Modules\")" >| CMakeLists.txt && \
+    echo "set(CMAKE_MODULE_PATH \"${CMAKE_MODULE_PATH};/emsdk/upstream/emscripten/cmake/Modules/\")" | cat - cmake/tuklib_integer.cmake > temp && mv temp cmake/tuklib_integer.cmake && \
     emcmake cmake . && emmake make 2>&1
 
 # compile libarchive to LLVM
