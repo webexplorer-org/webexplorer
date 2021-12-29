@@ -56,8 +56,5 @@ RUN cd /opt/libarchive-3.5.2 && emconfigure ./configure --enable-static --disabl
     --without-xml2 --without-expat 2>&1 | tee conf.out && \
     emmake make 2>&1
 
-#--without-openssl
-#--without-bz2lib --without-iconv --without-libiconv-prefix --without-lzma 
-
 WORKDIR /var/local/scripts/
-CMD ["bash","/var/local/scripts/build.sh"]
+CMD ["bash","/var/local/scripts/compile.sh"]
