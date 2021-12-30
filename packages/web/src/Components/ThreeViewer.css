@@ -1,8 +1,11 @@
 .three__viewer {
   position: relative;
+  margin-top: 1rem;
   padding-top: 40%;
 
   width: 100%;
+
+  box-shadow: 0 0 0 2px black;
 }
 
 .three__viewer .canvas {

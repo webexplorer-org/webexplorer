@@ -5,6 +5,7 @@ import {
   WebGLRenderer,
   Mesh,
   AmbientLight,
+  MeshPhysicalMaterial,
 } from "three";
 import { useEffect, useRef } from "react";
 import { useElementSize } from "../Hooks/useElementSize";
@@ -114,7 +115,17 @@ export function ThreeViewer(props: ThreeViewerProps) {
             const loader = new STLLoader();
             loader.load(url, (geometry) => {
               if (sceneRef.current) {
-                sceneRef.current.add(new Mesh(geometry));
+                const material = new MeshPhysicalMaterial({
+                  color: 0xb2ffc8,
+                  metalness: 0.25,
+                  roughness: 0.1,
+                  opacity: 1.0,
+                  transparent: true,
+                  transmission: 0.99,
+                  clearcoat: 1.0,
+                  clearcoatRoughness: 0.25,
+                });
+                sceneRef.current.add(new Mesh(geometry, material));
               }
             });
           }
