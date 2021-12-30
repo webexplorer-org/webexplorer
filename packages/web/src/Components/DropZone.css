@@ -13,6 +13,10 @@
   height: 16rem;
 }
 
+.dropzone h3 {
+  margin: 2rem 0 0.5rem 0;
+}
+
 .file__list {
   display: grid;
   column-gap: 1rem;
