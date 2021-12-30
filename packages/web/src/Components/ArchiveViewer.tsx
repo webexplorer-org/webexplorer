@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import * as comlink from "comlink";
 import "./ArchiveViewer.css";
 import { ArchiveEntry, ArchiveWorker } from "../Worker/ArchiveWorker";
@@ -24,7 +24,6 @@ export function ArchiveViewer(props: ArchiveViewerProps) {
       await worker.open(file, "");
       const entries = await worker.entries();
       setEntries(entries);
-      console.log(entries);
     }
 
     unarchive();

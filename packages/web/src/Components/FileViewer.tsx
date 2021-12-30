@@ -5,6 +5,7 @@ import { Loading } from "./Loading";
 
 const PdfViewer = React.lazy(() => import("./PdfViewer"));
 const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
+const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
 
 export interface FileViewerProps {
   file: File | null;
@@ -31,10 +32,23 @@ export function FileViewer(props: FileViewerProps) {
     case "application/x-gzip":
       viewer = <ArchiveViewer file={file} />;
       break;
+    case "model/stl":
+      viewer = <ThreeViewer file={file} format="stl" />;
+      break;
+    case "model/gltf-binary":
+    case "model/gltf+json":
+      viewer = <ThreeViewer file={file} format="gltf" />;
+      break;
+    case "model/obj":
+      viewer = <ThreeViewer file={file} format="obj" />;
+      break;
+    case "model/3mf":
+      viewer = <ThreeViewer file={file} format="3mf" />;
+      break;
     default:
       viewer = (
         <div>
-          Unsupported File: {file.name} {file.type}
+          Unsupported File: {file.name} {fileType}
         </div>
       );
   }

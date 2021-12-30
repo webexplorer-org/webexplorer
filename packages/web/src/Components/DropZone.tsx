@@ -50,6 +50,10 @@ export function DropZone(props: DropZoneProps) {
             <h4>Archive File</h4>
             <p>ZIP, RAR, TAR</p>
           </div>
+          <div className="file__list__item">
+            <h4>3D Model</h4>
+            <p>GLTF, STL, 3MF, OBJ</p>
+          </div>
         </div>
       </div>
     </div>
