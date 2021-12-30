@@ -1,4 +1,4 @@
-import { libarchive, ArchiveModule } from "@webexplorer/archive";
+import { init, ArchiveModule } from "@webexplorer/archive";
 // @ts-ignore
 import wasmUrl from "@webexplorer/archive/src/libarchive.wasm";
 import * as comlink from "comlink";
@@ -13,23 +13,24 @@ const TYPE_MAP = {
   4096: "NAMED_PIPE",
 };
 
+export type ArchiveEntry = {
+  name: string;
+  size: number;
+  path: string;
+  type: number;
+};
+
 export class ArchiveWorker {
   module: ArchiveModule | undefined;
-  filePtr: number | undefined;
-  fileLength: number | undefined;
-  passphrase: string | undefined;
+  filePtr: number | null = null;
+  fileLength: number = 0;
+  passphrase: string | null = null;
+  archive: number | null = null;
 
   async init() {
-    this.module = await libarchive({
+    this.module = await init({
       locateFile: () => {
         return wasmUrl;
-      },
-      onRuntimeInitialized() {
-        // Delete the `then` prop to avoid infite loop
-        // when use the returned module as a promise rather than call its then() method
-        // See https://github.com/emscripten-core/emscripten/issues/5820
-        // tslint:disable-next-line: prefer-type-cast
-        delete (this.module as any).then;
       },
     });
   }
@@ -42,7 +43,11 @@ export class ArchiveWorker {
     return this.module;
   }
 
-  async open(file: File) {
+  async open(file: File, passphrase: string | null) {
+    if (!this.filePtr) {
+      this.close();
+    }
+
     const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -53,52 +58,67 @@ export class ArchiveWorker {
     });
 
     const module = this.getModule();
-    const array = new Uint8Array(buffer);
-    this.fileLength = array.length;
-    this.filePtr = module._malloc(this.fileLength);
+
+    const array = new Int8Array(buffer);
+    const fileLength = array.length;
+    const filePtr = module.malloc(fileLength);
+    module.HEAP8.set(array, filePtr);
+
+    this.filePtr = filePtr;
+    this.fileLength = fileLength;
+    this.passphrase = passphrase;
+
+    this.archive = module.open(this.filePtr, this.fileLength, this.passphrase);
   }
 
-  *entries(skipExtraction = false) {
+  async close() {
+    if (this.filePtr) {
+      const module = this.getModule();
+
+      module.close(this.archive);
+      this.archive = null;
+
+      module.free(this.filePtr);
+      this.filePtr = null;
+    }
+  }
+
+  entries(skipExtraction = true) {
     const module = this.getModule();
 
-    const archive = module._archive_open(
-      this.filePtr,
-      this.fileLength,
-      this.passphrase
-    );
-    let entry;
+    const archive = module.open(this.filePtr, this.fileLength, this.passphrase);
+
+    const entries: ArchiveEntry[] = [];
 
     while (true) {
-      entry = module._get_next_entry(archive);
-      if (entry === 0) break;
+      let entryPtr = module.readNextEntry(archive);
+      if (entryPtr === 0) {
+        break;
+      }
 
-      const entryData = {
-        size: module._get_entry_size(entry),
-        path: module._get_entry_name(entry),
-        //@ts-ignore
-        type: TYPE_MAP[module._get_entry_type(entry) as number],
-        ref: entry,
+      const size = module.getEntrySize(entryPtr);
+      const path = module.getEntryPathName(entryPtr);
+      const type = module.getEntryFileType(entryPtr) as keyof typeof TYPE_MAP;
+
+      let name = "";
+      if (TYPE_MAP[type] === "FILE") {
+        let parts = path.split("/");
+        name = parts[parts.length - 1];
+      }
+
+      module.readDataSkip(archive);
+
+      const entry = {
+        name,
+        size,
+        path,
+        type,
       };
 
-      if (entryData.type === "FILE") {
-        let fileName = entryData.path.split("/");
-        //@ts-ignore
-        entryData.fileName = fileName[fileName.length - 1];
-      }
-
-      if (skipExtraction) {
-        module._archive_read_data_skip(archive);
-      } else {
-        const ptr = module._get_filedata(archive, entryData.size);
-        if (ptr < 0) {
-          throw new Error(module._get_error(archive));
-        }
-        //@ts-ignore
-        entryData.fileData = module.HEAP8.slice(ptr, ptr + entryData.size);
-        module._free(ptr);
-      }
-      yield entryData;
+      entries.push(entry);
     }
+
+    return entries;
   }
 }
 

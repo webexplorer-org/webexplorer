@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FilePicker } from "../Components/FilePicker";
 import { FileViewer } from "../Components/FileViewer";
+import { DropZone } from "../Components/DropZone";
 import { Page } from "../Components/Page";
 import { PageContent } from "../Components/PageContent";
 import { PageHeader } from "../Components/PageHeader";
@@ -25,7 +26,7 @@ export function HomePage() {
         />
       </PageHeader>
       <PageContent>
-        <FileViewer file={file} />
+        {file ? <FileViewer file={file} /> : <DropZone onDropFile={setFile} />}
       </PageContent>
     </Page>
   );

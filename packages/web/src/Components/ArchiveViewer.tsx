@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as comlink from "comlink";
 import "./ArchiveViewer.css";
-import type { ArchiveWorker } from "../Worker/ArchiveWorker";
+import { ArchiveEntry, ArchiveWorker } from "../Worker/ArchiveWorker";
 
 export interface ArchiveViewerProps {
   file: File;
@@ -16,19 +16,38 @@ export function ArchiveViewer(props: ArchiveViewerProps) {
     );
     return comlink.wrap<ArchiveWorker>(worker);
   });
+  const [entries, setEntries] = useState<ArchiveEntry[]>([]);
 
   useEffect(() => {
     async function unarchive() {
       await worker.init();
-      const version = await worker.open(file);
-
-      console.log(version);
+      await worker.open(file, "");
+      const entries = await worker.entries();
+      setEntries(entries);
+      console.log(entries);
     }
 
     unarchive();
+
+    return () => {
+      worker.close();
+    };
   }, [file, worker]);
 
-  return <div className="archive__viewer"></div>;
+  return (
+    <div className="archive__viewer">
+      <ol>
+        {entries.map((entry, index) => {
+          return (
+            <li key={index}>
+              <h4>{entry.name || entry.path}</h4>
+              <p>{entry.size}B</p>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 export default ArchiveViewer;

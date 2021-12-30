@@ -1,0 +1,35 @@
+.dropzone {
+  padding: 2rem 0;
+}
+
+.dropzone .dropzone__area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+
+  width: 100%;
+  height: 16rem;
+}
+
+.file__list {
+  display: grid;
+  column-gap: 1rem;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+
+  width: 100%;
+}
+
+.file__list__item {
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+}
+
+.file__list__item h4 {
+  margin: 0.5rem 0;
+}
+
+.file__list__item p {
+  margin: 0.5rem 0;
+}

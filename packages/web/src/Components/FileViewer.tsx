@@ -1,5 +1,5 @@
+import * as mime from "mime";
 import React, { Suspense } from "react";
-import { Mime } from "../Utils/Mime";
 import "./FileViewer.css";
 import { Loading } from "./Loading";
 
@@ -17,16 +17,26 @@ export function FileViewer(props: FileViewerProps) {
     return null;
   }
 
+  // @ts-ignore
+  const fileType = file.type || mime.getType(file.name);
+
   let viewer = null;
-  switch (file.type) {
-    case Mime.PDF:
+  switch (fileType) {
+    case "application/pdf":
       viewer = <PdfViewer file={file} />;
       break;
-    case Mime.ZIP:
+    case "application/zip":
+    case "application/vnd.rar":
+    case "application/x-zip-compressed":
+    case "application/x-gzip":
       viewer = <ArchiveViewer file={file} />;
       break;
     default:
-      viewer = <div>Unsupported File</div>;
+      viewer = (
+        <div>
+          Unsupported File: {file.name} {file.type}
+        </div>
+      );
   }
 
   return (
