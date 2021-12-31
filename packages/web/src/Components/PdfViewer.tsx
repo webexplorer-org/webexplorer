@@ -151,10 +151,9 @@ export interface PdfPageProps {
 }
 
 export function PdfPage(props: PdfPageProps) {
-  const { isVisible, page, viewport } = props;
+  const { isVisible, page, viewport, scale } = props;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const scale = props.scale * dpr;
 
   useEffect(() => {
     function render() {
@@ -180,8 +179,7 @@ export function PdfPage(props: PdfPageProps) {
         return;
       }
 
-      const transformX = window.devicePixelRatio * scale;
-      const transform = [transformX, 0, 0, transformX, 0, 0];
+      const transform = [scale * dpr, 0, 0, scale * dpr, 0, 0];
       const renderContext = {
         canvasContext: context,
         transform: transform,
@@ -193,18 +191,18 @@ export function PdfPage(props: PdfPageProps) {
     let task = render();
     return () => {
       if (task) {
-        task?.cancel();
+        task.cancel();
         task = undefined;
       }
     };
-  }, [isVisible, scale, page, viewport]);
+  }, [isVisible, page, scale, viewport]);
 
   if (!viewport) {
     return null;
   }
 
-  const width = Math.floor(viewport.width * scale);
-  const height = Math.floor(viewport.height * scale);
+  const width = Math.floor(viewport.width * scale * dpr);
+  const height = Math.floor(viewport.height * scale * dpr);
   const style = {
     width: Math.floor(viewport.width * scale),
     height: Math.floor(viewport.height * scale),

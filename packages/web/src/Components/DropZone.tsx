@@ -45,6 +45,11 @@ export function DropZone(props: DropZoneProps) {
         <div className="file__list">
           <div className="file__list__item">
             <h4>PDF File</h4>
+            <p>PDF</p>
+          </div>
+          <div className="file__list__item">
+            <h4>EPUB File</h4>
+            <p>EPUB</p>
           </div>
           <div className="file__list__item">
             <h4>Archive File</h4>

@@ -6,6 +6,8 @@ import { Loading } from "./Loading";
 const PdfViewer = React.lazy(() => import("./PdfViewer"));
 const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
 const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
+const EPubViewer = React.lazy(() => import("./EPubViewer"));
+const MobiViewer = React.lazy(() => import("./MobiViewer"));
 
 export interface FileViewerProps {
   file: File | null;
@@ -25,6 +27,12 @@ export function FileViewer(props: FileViewerProps) {
   switch (fileType) {
     case "application/pdf":
       viewer = <PdfViewer file={file} />;
+      break;
+    case "application/epub+zip":
+      viewer = <EPubViewer file={file} />;
+      break;
+    case "application/mobi":
+      viewer = <MobiViewer file={file} />;
       break;
     case "application/zip":
     case "application/vnd.rar":

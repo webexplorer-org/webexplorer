@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import * as comlink from "comlink";
 import "./ArchiveViewer.css";
-import { ArchiveEntry, ArchiveWorker } from "../Worker/ArchiveWorker";
+import { useArchiveWorker } from "../Hooks/useArchiveWorker";
+import { useUnarchive } from "../Hooks/useUnarchive";
 
 export interface ArchiveViewerProps {
   file: File;
@@ -10,28 +9,8 @@ export interface ArchiveViewerProps {
 export function ArchiveViewer(props: ArchiveViewerProps) {
   const { file } = props;
 
-  const [worker] = useState(() => {
-    const worker = new Worker(
-      new URL("../Worker/ArchiveWorker.ts", import.meta.url)
-    );
-    return comlink.wrap<ArchiveWorker>(worker);
-  });
-  const [entries, setEntries] = useState<ArchiveEntry[]>([]);
-
-  useEffect(() => {
-    async function unarchive() {
-      await worker.init();
-      await worker.open(file, "");
-      const entries = await worker.entries();
-      setEntries(entries);
-    }
-
-    unarchive();
-
-    return () => {
-      worker.close();
-    };
-  }, [file, worker]);
+  const worker = useArchiveWorker();
+  const [entries] = useUnarchive(worker, file, "");
 
   return (
     <div className="archive__viewer">
@@ -39,8 +18,10 @@ export function ArchiveViewer(props: ArchiveViewerProps) {
         {entries.map((entry, index) => {
           return (
             <li key={index}>
-              <h4>{entry.name || entry.path}</h4>
-              <p>{entry.size}B</p>
+              <div>
+                <h4>{entry.name}</h4>
+                <p>{entry.path}</p>
+              </div>
             </li>
           );
         })}
