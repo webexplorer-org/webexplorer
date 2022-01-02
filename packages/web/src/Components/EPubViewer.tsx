@@ -80,7 +80,7 @@ export function EPubViewer(props: EPubViewerProps) {
         </button>
       </div>
       <div>
-        <iframe title={doc} srcDoc={doc} />
+        <iframe title={epub.metadata.title} srcDoc={doc} />
       </div>
     </div>
   );

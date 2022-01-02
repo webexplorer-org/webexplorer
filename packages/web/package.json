@@ -17,6 +17,7 @@
     "@types/three": "^0.135.0",
     "@webexplorer/archive": "^0.1.0",
     "@webexplorer/epub": "^0.1.0",
+    "@webexplorer/mobi": "^0.1.0",
     "babel-jest": "^27.4.2",
     "babel-loader": "^8.2.3",
     "babel-plugin-named-asset-import": "^0.3.8",

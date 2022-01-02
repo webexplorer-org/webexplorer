@@ -1,0 +1,20 @@
+{
+  "name": "@webexplorer/mobi",
+  "version": "0.1.0",
+  "description": "mobi parser",
+  "main": "src/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "tape"
+  },
+  "keywords": [
+    "mobi",
+    "parser"
+  ],
+  "author": "Ji Chang",
+  "license": "MIT",
+  "dependencies": {
+    "@webexplorer/archive": "^0.1.0",
+    "typescript": "^4.5.4"
+  }
+}

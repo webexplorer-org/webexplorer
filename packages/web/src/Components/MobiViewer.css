@@ -1,0 +1,8 @@
+.mobi__viewer {
+  margin: 1rem;
+}
+
+.mobi__viewer iframe {
+  width: 100%;
+  height: calc(100vh - 6rem);
+}

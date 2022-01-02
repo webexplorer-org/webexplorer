@@ -31,7 +31,7 @@ export function FileViewer(props: FileViewerProps) {
     case "application/epub+zip":
       viewer = <EPubViewer file={file} />;
       break;
-    case "application/mobi":
+    case "application/x-mobipocket-ebook":
       viewer = <MobiViewer file={file} />;
       break;
     case "application/zip":
