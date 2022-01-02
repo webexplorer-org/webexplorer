@@ -2,6 +2,10 @@
   padding: 1rem;
 }
 
+.dropzone ol p {
+  line-height: 1.5rem;
+}
+
 .dropzone .dropzone__area {
   display: flex;
   flex-direction: column;

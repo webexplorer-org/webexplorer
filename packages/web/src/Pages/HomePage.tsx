@@ -15,7 +15,7 @@ export function HomePage() {
   return (
     <Page>
       <PageHeader>
-        <PageTitle title="WebReader"></PageTitle>
+        <PageTitle title="Web Explorer"></PageTitle>
         <FilePicker
           accept="*/pdf"
           onFiles={(files) => {
