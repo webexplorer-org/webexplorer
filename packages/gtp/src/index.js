@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseColor = exports.parseChannel = exports.parseMeasures = exports.parseTracks = exports.TrackFlag = exports.parseMeasureHeaders = exports.MeasureFlag = exports.parseMidiChannels = exports.parseInfo = exports.parse = exports.GtpStream = exports.TripletFeel = void 0;
+exports.parseColor = exports.parseBeat = exports.parseMeasures = exports.QuarterTime = exports.parseChannel = exports.parseTracks = exports.TrackFlag = exports.parseMeasureHeaders = exports.MeasureFlag = exports.parseMidiChannels = exports.isPercussionChannel = exports.DEFAULT_PERCUSSION_CHANNEL = exports.parse = exports.KeySignature = exports.GtpStream = exports.TripletFeel = void 0;
 const common_1 = require("@webexplorer/common");
 var TripletFeel;
 (function (TripletFeel) {
@@ -9,7 +9,7 @@ var TripletFeel;
 })(TripletFeel = exports.TripletFeel || (exports.TripletFeel = {}));
 class GtpStream extends common_1.Stream {
     readBool() {
-        const byte = this.readUint8();
+        const byte = this.readInt8();
         return !!(byte & 0xff);
     }
     readString(size, length) {
@@ -20,28 +20,57 @@ class GtpStream extends common_1.Stream {
         return (0, common_1.bytesToString)(this.readBytes(count).slice(0, length));
     }
     readByteSizeString(size) {
-        const byte = this.readUint8();
+        const byte = this.readInt8();
         return this.readString(size, byte);
     }
     readIntSizeString() {
-        const len = this.readUint32(true);
+        const len = this.readInt32(true);
         return this.readString(len);
     }
     readIntByteSizeString() {
-        const len = this.readUint32(true) - 1;
+        const len = this.readInt32(true) - 1;
         return this.readByteSizeString(len);
     }
 }
 exports.GtpStream = GtpStream;
+exports.KeySignature = {
+    FMajorFlat: [-8, 0],
+    CMajorFlat: [-7, 0],
+    GMajorFlat: [-6, 0],
+    DMajorFlat: [-5, 0],
+    AMajorFlat: [-4, 0],
+    EMajorFlat: [-3, 0],
+    BMajorFlat: [-2, 0],
+    FMajor: [-1, 0],
+    CMajor: [0, 0],
+    GMajor: [1, 0],
+    DMajor: [2, 0],
+    AMajor: [3, 0],
+    EMajor: [4, 0],
+    BMajor: [5, 0],
+    FMajorSharp: [6, 0],
+    CMajorSharp: [7, 0],
+    GMajorSharp: [8, 0],
+    DMinorFlat: [-8, 1],
+    AMinorFlat: [-7, 1],
+    EMinorFlat: [-6, 1],
+    BMinorFlat: [-5, 1],
+    FMinor: [-4, 1],
+    CMinor: [-3, 1],
+    GMinor: [-2, 1],
+    DMinor: [-1, 1],
+    AMinor: [0, 1],
+    EMinor: [1, 1],
+    BMinor: [2, 1],
+    FMinorSharp: [3, 1],
+    CMinorSharp: [4, 1],
+    GMinorSharp: [5, 1],
+    DMinorSharp: [6, 1],
+    AMinorSharp: [7, 1],
+    EMinorSharp: [8, 1],
+};
 function parse(buffer) {
     const stream = new GtpStream(buffer);
-    const info = parseInfo(stream);
-    return {
-        info,
-    };
-}
-exports.parse = parse;
-function parseInfo(stream) {
     const version = stream.readByteSizeString(30);
     const title = stream.readIntByteSizeString();
     const subtitle = stream.readIntByteSizeString();
@@ -51,21 +80,21 @@ function parseInfo(stream) {
     const copyright = stream.readIntByteSizeString();
     const tab = stream.readIntByteSizeString();
     const instructions = stream.readIntByteSizeString();
-    const noticesCount = stream.readUint32(true);
+    const noticesCount = stream.readInt32(true);
     const notices = [];
     for (let i = 0; i < noticesCount; i++) {
         const notice = stream.readIntByteSizeString();
         notices.push(notice);
     }
     const tripletFeel = stream.readBool() ? TripletFeel.Eighth : TripletFeel.None;
-    const tempo = stream.readUint32(true);
-    const key = stream.readUint32(true);
+    const tempo = stream.readInt32(true);
+    const key = stream.readInt32(true);
     const channels = parseMidiChannels(stream);
-    const measureCount = stream.readUint32(true);
-    const trackCount = stream.readUint32(true);
+    const measureCount = stream.readInt32(true);
+    const trackCount = stream.readInt32(true);
     const measureHeaders = parseMeasureHeaders(stream, measureCount);
-    const tracks = parserTracks(stream, trackCount, channels);
-    const measures = parseMeasures(stream);
+    const tracks = parseTracks(stream, trackCount, channels);
+    parseMeasures(stream, measureHeaders, tracks);
     return {
         version,
         title,
@@ -82,10 +111,15 @@ function parseInfo(stream) {
         key,
         channels,
         measureHeaders,
-        trackCount,
+        tracks,
     };
 }
-exports.parseInfo = parseInfo;
+exports.parse = parse;
+exports.DEFAULT_PERCUSSION_CHANNEL = 9;
+function isPercussionChannel(channel) {
+    return channel % 16 == exports.DEFAULT_PERCUSSION_CHANNEL;
+}
+exports.isPercussionChannel = isPercussionChannel;
 /*
   stream Guitar Pro format provides 64 channels (4 MIDI ports by 16 channels), the channels are stored in this order:
   - port1/channel1
@@ -109,26 +143,28 @@ exports.parseInfo = parseInfo;
 function parseMidiChannels(stream) {
     const channels = [];
     for (let i = 0; i < 64; i++) {
-        const instrument = stream.readUint32(true);
-        const volume = stream.readUint8();
-        const balance = stream.readUint8();
-        const chorus = stream.readUint8();
-        const reverb = stream.readUint8();
-        const phaser = stream.readUint8();
-        const tremolo = stream.readUint8();
+        const channel = i;
+        const effectChannel = i;
+        const isPercussionChannel = channel % 16 == exports.DEFAULT_PERCUSSION_CHANNEL;
+        const instrument = stream.readInt32(true);
+        const volume = stream.readInt8();
+        const balance = stream.readInt8();
+        const chorus = stream.readInt8();
+        const reverb = stream.readInt8();
+        const phaser = stream.readInt8();
+        const tremolo = stream.readInt8();
         stream.forward(2);
-        const channel = {
-            channel: i,
-            effectChannel: i,
-            instrument,
+        channels.push({
+            channel,
+            effectChannel,
+            instrument: isPercussionChannel && instrument === -1 ? 0 : instrument,
             volume,
             balance,
             chorus,
             reverb,
             phaser,
             tremolo,
-        };
-        channels.push(channel);
+        });
     }
     return channels;
 }
@@ -147,50 +183,53 @@ var MeasureFlag;
 function parseMeasureHeaders(stream, measureCount) {
     const measureHeaders = [];
     let previousHeader = null;
-    for (let i = 1; i <= measureCount; i++) {
-        const flag = stream.readUint8();
+    for (let i = 1; i < measureCount + 1; i++) {
+        const flag = stream.readInt8();
         let numerator;
         if (flag & MeasureFlag.KeyNumerator) {
-            numerator = stream.readUint8();
+            numerator = stream.readInt8();
         }
         else {
             numerator = previousHeader === null || previousHeader === void 0 ? void 0 : previousHeader.numerator;
         }
-        if (!numerator) {
-            throw new Error(`no numerator for channel ${i}`);
+        if (numerator === undefined) {
+            throw new Error("no numerator found");
         }
         let denominator;
         if (flag & MeasureFlag.KeyDenominator) {
-            denominator = stream.readUint8();
+            denominator = stream.readInt8();
         }
         else {
             denominator = previousHeader === null || previousHeader === void 0 ? void 0 : previousHeader.denominator;
         }
-        if (!denominator) {
-            throw new Error(`no denominator for channel ${i}`);
+        if (denominator === undefined) {
+            throw new Error("no denominator found");
         }
+        const isRepeatBegin = !!(flag && MeasureFlag.RepeatBegin);
+        const hasDoubleBar = !!(flag & MeasureFlag.PresenceDoubleBar);
         const measureHeader = {
+            startTime: 0,
             flag,
             numerator,
             denominator,
-            isRepeatOpen: !!(flag & MeasureFlag.RepeatBegin),
-            hasDoubleBar: !!(flag & MeasureFlag.PresenceDoubleBar),
+            isRepeatBegin,
+            hasDoubleBar,
         };
         if (flag & MeasureFlag.RepeatEnd) {
-            measureHeader.repeatEnd = stream.readUint8();
+            measureHeader.repeatEnd = stream.readInt8();
         }
         if (flag & MeasureFlag.AlternateRepeatEnd) {
-            const value = stream.readUint8();
+            const value = stream.readInt8();
             let alternateRepeatEnd = 0;
-            for (const measureHeader of measureHeaders) {
-                if (measureHeader.isRepeatOpen) {
+            for (const measureHeader of measureHeaders.reverse()) {
+                if (measureHeader.isRepeatBegin) {
                     break;
                 }
                 alternateRepeatEnd =
                     measureHeader.alternateRepeatEnd | alternateRepeatEnd;
             }
             measureHeader.alternateRepeatEnd =
-                ((1 << value) - 1) ^ alternateRepeatEnd;
+                (1 << value) - (1 ^ alternateRepeatEnd);
         }
         if (flag & MeasureFlag.PresenceMarker) {
             const title = stream.readIntByteSizeString();
@@ -201,14 +240,14 @@ function parseMeasureHeaders(stream, measureCount) {
             };
         }
         if (flag & MeasureFlag.Tonality) {
-            const root = stream.readUint8();
-            const type = stream.readUint8();
+            const root = stream.readInt8();
+            const type = stream.readInt8();
             measureHeader.tonality = {
                 root,
                 type,
             };
         }
-        else if (measureHeaders.length > 1) {
+        else if (i > 1) {
             measureHeader.tonality = previousHeader === null || previousHeader === void 0 ? void 0 : previousHeader.tonality;
         }
         measureHeaders.push(measureHeader);
@@ -253,22 +292,23 @@ Flags are followed by:
 function parseTracks(stream, trackCount, channels) {
     const tracks = [];
     for (let i = 0; i < trackCount; i++) {
-        const flag = stream.readUint8();
+        const flag = stream.readInt8();
         const name = stream.readByteSizeString(40);
-        const count = stream.readUint32();
+        const count = stream.readInt32(true);
         const strings = [];
         for (let i = 0; i < 7; i++) {
-            const tuning = stream.readUint32();
+            const tuning = stream.readInt32(true);
             if (i < count) {
                 strings.push({
+                    index: i + 1,
                     tuning,
                 });
             }
         }
-        const port = stream.readUint32();
+        const port = stream.readInt32(true);
         const channel = parseChannel(stream, channels);
-        const fretCount = stream.readUint32();
-        const offset = stream.readUint32();
+        const fretCount = stream.readInt32(true);
+        const offset = stream.readInt32(true);
         const color = parseColor(stream);
         tracks.push({
             flag,
@@ -285,6 +325,22 @@ function parseTracks(stream, trackCount, channels) {
     return tracks;
 }
 exports.parseTracks = parseTracks;
+function parseChannel(stream, channels) {
+    const index = stream.readInt32(true) - 1;
+    const effectChannel = stream.readInt32(true) - 1;
+    if (index >= 0 && index < channels.length) {
+        const channel = Object.assign({}, channels[index]);
+        if (channel.instrument < 0) {
+            channel.instrument = 0;
+        }
+        if (!isPercussionChannel(channel.channel)) {
+            channel.effectChannel = effectChannel;
+        }
+        return channel;
+    }
+}
+exports.parseChannel = parseChannel;
+exports.QuarterTime = 960;
 /*
 Measures are written in the following order:
 - measure 1/track 1
@@ -302,34 +358,57 @@ Measures are written in the following order:
 - measure n/track m
 */
 function parseMeasures(stream, measureHeaders, tracks) {
-    const measures = [];
+    let startTime = exports.QuarterTime;
     for (const measureHeader of measureHeaders) {
+        measureHeader.startTime = startTime;
         for (const track of tracks) {
-            const measure = {};
+            const beatCount = stream.readInt32();
+            const beats = [];
+            for (let i = 0; i < beatCount; i++) {
+                const beat = parseBeat(stream, beats, startTime);
+                beats.push(beat);
+            }
+            const measure = {
+                startTime,
+                beats,
+            };
             track.measures.push(measure);
         }
+        startTime = startTime + measureHeader.denominator;
     }
-    return measures;
 }
 exports.parseMeasures = parseMeasures;
-function parseChannel(stream, channels) {
-    const index = stream.readUint32();
-    const effectChannel = stream.readUint32();
-    if (index >= 0 && index < channels.length) {
-        const channel = Object.assign({}, channels[index]);
-        if (channel.instrument < 0) {
-            channel.instrument = 0;
-        }
-        channel.effectChannel = effectChannel;
-        return channel;
-    }
+/*
+The first byte is the beat flags. It lists the data present in
+the current beat:
+- *0x01*: dotted notes
+- *0x02*: presence of a chord diagram
+- *0x04*: presence of a text
+- *0x08*: presence of effects
+- *0x10*: presence of a mix table change event
+- *0x20*: the beat is a n-tuplet
+- *0x40*: status: True if the beat is empty of if it is a rest
+- *0x80*: *blank*
+Flags are followed by:
+- Status: :ref:`byte`. If flag at *0x40* is true, read one byte.
+  If value of the byte is *0x00* then beat is empty, if value is
+  *0x02* then the beat is rest.
+- Beat duration: :ref:`byte`. See :meth:`readDuration`.
+- Chord diagram. See :meth:`readChord`.
+- Text: :ref:`int-byte-size-string`.
+- Beat effects. See :meth:`readBeatEffects`.
+- Mix table change effect. See :meth:`readMixTableChange`.
+*/
+function parseBeat(stream, beats, startTime) {
+    const flags = stream.readInt8();
+    return {};
 }
-exports.parseChannel = parseChannel;
+exports.parseBeat = parseBeat;
 function parseColor(stream) {
     const color = [
-        stream.readUint8(),
-        stream.readUint8(),
-        stream.readUint8(),
+        stream.readInt8(),
+        stream.readInt8(),
+        stream.readInt8(),
     ];
     return color;
 }

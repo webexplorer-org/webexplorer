@@ -95,6 +95,24 @@ export class Stream {
     return u32;
   }
 
+  readInt8() {
+    const u8 = this.view.getInt8(this.offset);
+    this.offset = this.offset + 1;
+    return u8;
+  }
+
+  readInt16(littleEndian: boolean = false) {
+    const u16 = this.view.getInt16(this.offset, littleEndian);
+    this.offset = this.offset + 2;
+    return u16;
+  }
+
+  readInt32(littleEndian: boolean = false) {
+    const u32 = this.view.getInt32(this.offset, littleEndian);
+    this.offset = this.offset + 4;
+    return u32;
+  }
+
   forward(len: number) {
     this.offset = this.offset + len;
   }

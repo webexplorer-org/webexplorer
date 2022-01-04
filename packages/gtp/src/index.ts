@@ -1,4 +1,4 @@
-import { BufferBuilder, Stream, bytesToString } from "@webexplorer/common";
+import { Stream, bytesToString } from "@webexplorer/common";
 
 export enum TripletFeel {
   None,
@@ -7,7 +7,7 @@ export enum TripletFeel {
 
 export class GtpStream extends Stream {
   readBool(): boolean {
-    const byte = this.readUint8();
+    const byte = this.readInt8();
     return !!(byte & 0xff);
   }
 
@@ -21,26 +21,59 @@ export class GtpStream extends Stream {
   }
 
   readByteSizeString(size: number) {
-    const byte = this.readUint8();
+    const byte = this.readInt8();
     return this.readString(size, byte);
   }
 
   readIntSizeString() {
-    const len = this.readUint32(true);
+    const len = this.readInt32(true);
     return this.readString(len);
   }
 
   readIntByteSizeString() {
-    const len = this.readUint32(true) - 1;
+    const len = this.readInt32(true) - 1;
     return this.readByteSizeString(len);
   }
 }
 
-export type Gtp = {
-  info: GtpInfo;
+export const KeySignature = {
+  FMajorFlat: [-8, 0],
+  CMajorFlat: [-7, 0],
+  GMajorFlat: [-6, 0],
+  DMajorFlat: [-5, 0],
+  AMajorFlat: [-4, 0],
+  EMajorFlat: [-3, 0],
+  BMajorFlat: [-2, 0],
+  FMajor: [-1, 0],
+  CMajor: [0, 0],
+  GMajor: [1, 0],
+  DMajor: [2, 0],
+  AMajor: [3, 0],
+  EMajor: [4, 0],
+  BMajor: [5, 0],
+  FMajorSharp: [6, 0],
+  CMajorSharp: [7, 0],
+  GMajorSharp: [8, 0],
+  DMinorFlat: [-8, 1],
+  AMinorFlat: [-7, 1],
+  EMinorFlat: [-6, 1],
+  BMinorFlat: [-5, 1],
+  FMinor: [-4, 1],
+  CMinor: [-3, 1],
+  GMinor: [-2, 1],
+  DMinor: [-1, 1],
+  AMinor: [0, 1],
+  EMinor: [1, 1],
+  BMinor: [2, 1],
+  FMinorSharp: [3, 1],
+  CMinorSharp: [4, 1],
+  GMinorSharp: [5, 1],
+  DMinorSharp: [6, 1],
+  AMinorSharp: [7, 1],
+  EMinorSharp: [8, 1],
 };
 
-export type GtpInfo = {
+export type Gtp = {
   version: string;
   title: string;
   subtitle: string;
@@ -56,21 +89,14 @@ export type GtpInfo = {
   key: number;
   channels: MidiChannel[];
   measureHeaders: MeasureHeader[];
-  tracks: [];
-  measures: Measure[];
+  tracks: Track[];
 };
 
 export function parse(buffer: ArrayBuffer): Gtp {
   const stream = new GtpStream(buffer);
-  const info = parseInfo(stream);
 
-  return {
-    info,
-  };
-}
-
-export function parseInfo(stream: GtpStream): GtpInfo {
   const version = stream.readByteSizeString(30);
+
   const title = stream.readIntByteSizeString();
   const subtitle = stream.readIntByteSizeString();
   const artist = stream.readIntByteSizeString();
@@ -79,8 +105,7 @@ export function parseInfo(stream: GtpStream): GtpInfo {
   const copyright = stream.readIntByteSizeString();
   const tab = stream.readIntByteSizeString();
   const instructions = stream.readIntByteSizeString();
-
-  const noticesCount = stream.readUint32(true);
+  const noticesCount = stream.readInt32(true);
   const notices = [];
   for (let i = 0; i < noticesCount; i++) {
     const notice = stream.readIntByteSizeString();
@@ -88,17 +113,17 @@ export function parseInfo(stream: GtpStream): GtpInfo {
   }
 
   const tripletFeel = stream.readBool() ? TripletFeel.Eighth : TripletFeel.None;
-  const tempo = stream.readUint32(true);
-  const key = stream.readUint32(true);
+  const tempo = stream.readInt32(true);
+  const key = stream.readInt32(true);
 
   const channels = parseMidiChannels(stream);
 
-  const measureCount = stream.readUint32(true);
-  const trackCount = stream.readUint32(true);
+  const measureCount = stream.readInt32(true);
+  const trackCount = stream.readInt32(true);
 
   const measureHeaders = parseMeasureHeaders(stream, measureCount);
-  const tracks = parserTracks(stream, trackCount, channels);
-  const measures = parseMeasures(stream);
+  const tracks = parseTracks(stream, trackCount, channels);
+  parseMeasures(stream, measureHeaders, tracks);
 
   return {
     version,
@@ -116,7 +141,7 @@ export function parseInfo(stream: GtpStream): GtpInfo {
     key,
     channels,
     measureHeaders,
-    trackCount,
+    tracks,
   };
 }
 
@@ -131,6 +156,12 @@ export type MidiChannel = {
   phaser: number;
   tremolo: number;
 };
+
+export const DEFAULT_PERCUSSION_CHANNEL = 9;
+
+export function isPercussionChannel(channel: number) {
+  return channel % 16 == DEFAULT_PERCUSSION_CHANNEL;
+}
 
 /*
   stream Guitar Pro format provides 64 channels (4 MIDI ports by 16 channels), the channels are stored in this order:
@@ -155,29 +186,30 @@ export type MidiChannel = {
 export function parseMidiChannels(stream: GtpStream) {
   const channels = [];
   for (let i = 0; i < 64; i++) {
-    const instrument = stream.readUint32(true);
-    const volume = stream.readUint8();
-    const balance = stream.readUint8();
-    const chorus = stream.readUint8();
-    const reverb = stream.readUint8();
-    const phaser = stream.readUint8();
-    const tremolo = stream.readUint8();
+    const channel = i;
+    const effectChannel = i;
+    const isPercussionChannel = channel % 16 == DEFAULT_PERCUSSION_CHANNEL;
+    const instrument = stream.readInt32(true);
+    const volume = stream.readInt8();
+    const balance = stream.readInt8();
+    const chorus = stream.readInt8();
+    const reverb = stream.readInt8();
+    const phaser = stream.readInt8();
+    const tremolo = stream.readInt8();
 
     stream.forward(2);
 
-    const channel = {
-      channel: i,
-      effectChannel: i,
-      instrument,
+    channels.push({
+      channel,
+      effectChannel,
+      instrument: isPercussionChannel && instrument === -1 ? 0 : instrument,
       volume,
       balance,
       chorus,
       reverb,
       phaser,
       tremolo,
-    };
-
-    channels.push(channel);
+    });
   }
 
   return channels;
@@ -195,10 +227,11 @@ export enum MeasureFlag {
 }
 
 export type MeasureHeader = {
+  startTime: number;
   flag: MeasureFlag;
   numerator: number;
   denominator: number;
-  isRepeatOpen: boolean;
+  isRepeatBegin: boolean;
   repeatEnd?: number;
   alternateRepeatEnd?: number;
   marker?: {
@@ -215,45 +248,49 @@ export type MeasureHeader = {
 export function parseMeasureHeaders(stream: GtpStream, measureCount: number) {
   const measureHeaders: MeasureHeader[] = [];
   let previousHeader: MeasureHeader | null = null;
-  for (let i = 1; i <= measureCount; i++) {
-    const flag = stream.readUint8();
+  for (let i = 1; i < measureCount + 1; i++) {
+    const flag = stream.readInt8();
+
     let numerator: number | undefined;
     if (flag & MeasureFlag.KeyNumerator) {
-      numerator = stream.readUint8();
+      numerator = stream.readInt8();
     } else {
       numerator = previousHeader?.numerator;
     }
-    if (!numerator) {
-      throw new Error(`no numerator for channel ${i}`);
+    if (numerator === undefined) {
+      throw new Error("no numerator found");
     }
 
     let denominator: number | undefined;
     if (flag & MeasureFlag.KeyDenominator) {
-      denominator = stream.readUint8();
+      denominator = stream.readInt8();
     } else {
       denominator = previousHeader?.denominator;
     }
-    if (!denominator) {
-      throw new Error(`no denominator for channel ${i}`);
+    if (denominator === undefined) {
+      throw new Error("no denominator found");
     }
 
+    const isRepeatBegin = !!(flag && MeasureFlag.RepeatBegin);
+    const hasDoubleBar = !!(flag & MeasureFlag.PresenceDoubleBar);
     const measureHeader: MeasureHeader = {
+      startTime: 0,
       flag,
       numerator,
       denominator,
-      isRepeatOpen: !!(flag & MeasureFlag.RepeatBegin),
-      hasDoubleBar: !!(flag & MeasureFlag.PresenceDoubleBar),
+      isRepeatBegin,
+      hasDoubleBar,
     };
 
     if (flag & MeasureFlag.RepeatEnd) {
-      measureHeader.repeatEnd = stream.readUint8();
+      measureHeader.repeatEnd = stream.readInt8();
     }
 
     if (flag & MeasureFlag.AlternateRepeatEnd) {
-      const value = stream.readUint8();
+      const value = stream.readInt8();
       let alternateRepeatEnd = 0;
-      for (const measureHeader of measureHeaders) {
-        if (measureHeader.isRepeatOpen) {
+      for (const measureHeader of measureHeaders.reverse()) {
+        if (measureHeader.isRepeatBegin) {
           break;
         }
 
@@ -261,7 +298,7 @@ export function parseMeasureHeaders(stream: GtpStream, measureCount: number) {
           measureHeader.alternateRepeatEnd! | alternateRepeatEnd;
       }
       measureHeader.alternateRepeatEnd =
-        ((1 << value) - 1) ^ alternateRepeatEnd;
+        (1 << value) - (1 ^ alternateRepeatEnd);
     }
 
     if (flag & MeasureFlag.PresenceMarker) {
@@ -274,13 +311,13 @@ export function parseMeasureHeaders(stream: GtpStream, measureCount: number) {
     }
 
     if (flag & MeasureFlag.Tonality) {
-      const root = stream.readUint8();
-      const type = stream.readUint8();
+      const root = stream.readInt8();
+      const type = stream.readInt8();
       measureHeader.tonality = {
         root,
         type,
       };
-    } else if (measureHeaders.length > 1) {
+    } else if (i > 1) {
       measureHeader.tonality = previousHeader?.tonality;
     }
 
@@ -301,7 +338,7 @@ export enum TrackFlag {
 export type Track = {
   flag: TrackFlag;
   name: string;
-  strings: { tuning: number }[];
+  strings: { index: number; tuning: number }[];
   port: number;
   channel: MidiChannel | undefined;
   fretCount: number;
@@ -345,22 +382,23 @@ export function parseTracks(
   const tracks: Track[] = [];
 
   for (let i = 0; i < trackCount; i++) {
-    const flag = stream.readUint8();
+    const flag = stream.readInt8();
     const name = stream.readByteSizeString(40);
-    const count = stream.readUint32();
+    const count = stream.readInt32(true);
     const strings = [];
     for (let i = 0; i < 7; i++) {
-      const tuning = stream.readUint32();
+      const tuning = stream.readInt32(true);
       if (i < count) {
         strings.push({
+          index: i + 1,
           tuning,
         });
       }
     }
-    const port = stream.readUint32();
+    const port = stream.readInt32(true);
     const channel = parseChannel(stream, channels);
-    const fretCount = stream.readUint32();
-    const offset = stream.readUint32();
+    const fretCount = stream.readInt32(true);
+    const offset = stream.readInt32(true);
     const color = parseColor(stream);
 
     tracks.push({
@@ -379,7 +417,26 @@ export function parseTracks(
   return tracks;
 }
 
-export type Measure = {};
+export function parseChannel(stream: GtpStream, channels: MidiChannel[]) {
+  const index = stream.readInt32(true) - 1;
+  const effectChannel = stream.readInt32(true) - 1;
+  if (index >= 0 && index < channels.length) {
+    const channel = { ...channels[index] };
+    if (channel.instrument < 0) {
+      channel.instrument = 0;
+    }
+    if (!isPercussionChannel(channel.channel)) {
+      channel.effectChannel = effectChannel;
+    }
+    return channel;
+  }
+}
+
+export const QuarterTime = 960;
+
+export type Measure = {
+  startTime: number;
+};
 
 /*
 Measures are written in the following order:
@@ -402,37 +459,63 @@ export function parseMeasures(
   measureHeaders: MeasureHeader[],
   tracks: Track[]
 ) {
-  const measures: Measure = [];
-
+  let startTime = QuarterTime;
   for (const measureHeader of measureHeaders) {
+    measureHeader.startTime = startTime;
     for (const track of tracks) {
-      const measure = {};
+      const beatCount = stream.readInt32();
+
+      const beats: Beat[] = [];
+      for (let i = 0; i < beatCount; i++) {
+        const beat = parseBeat(stream, beats, startTime);
+        beats.push(beat);
+      }
+
+      const measure = {
+        startTime,
+        beats,
+      };
 
       track.measures.push(measure);
     }
+    startTime = startTime + measureHeader.denominator;
   }
-
-  return measures;
 }
 
-export function parseChannel(stream: GtpStream, channels: MidiChannel[]) {
-  const index = stream.readUint32();
-  const effectChannel = stream.readUint32();
-  if (index >= 0 && index < channels.length) {
-    const channel = { ...channels[index] };
-    if (channel.instrument < 0) {
-      channel.instrument = 0;
-    }
-    channel.effectChannel = effectChannel;
-    return channel;
-  }
+export type Beat = {};
+
+/*
+The first byte is the beat flags. It lists the data present in
+the current beat:
+- *0x01*: dotted notes
+- *0x02*: presence of a chord diagram
+- *0x04*: presence of a text
+- *0x08*: presence of effects
+- *0x10*: presence of a mix table change event
+- *0x20*: the beat is a n-tuplet
+- *0x40*: status: True if the beat is empty of if it is a rest
+- *0x80*: *blank*
+Flags are followed by:
+- Status: :ref:`byte`. If flag at *0x40* is true, read one byte.
+  If value of the byte is *0x00* then beat is empty, if value is
+  *0x02* then the beat is rest.
+- Beat duration: :ref:`byte`. See :meth:`readDuration`.
+- Chord diagram. See :meth:`readChord`.
+- Text: :ref:`int-byte-size-string`.
+- Beat effects. See :meth:`readBeatEffects`.
+- Mix table change effect. See :meth:`readMixTableChange`.
+*/
+export function parseBeat(stream: GtpStream, beats: Beat[], startTime: number) {
+  const flags = stream.readInt8();
+
+  return {};
 }
 
 export function parseColor(stream: GtpStream) {
   const color: [number, number, number] = [
-    stream.readUint8(),
-    stream.readUint8(),
-    stream.readUint8(),
+    stream.readInt8(),
+    stream.readInt8(),
+    stream.readInt8(),
   ];
   return color;
 }
