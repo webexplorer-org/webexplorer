@@ -1,91 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.uncompressionLZ77 = exports.getVarLen = exports.readTextRecord = exports.readText = exports.parseMobiHeader = exports.parsePalmDDCHeader = exports.parseRecordList = exports.parsePDBHeader = exports.parse = exports.EncryptionType = exports.Compression = exports.Stream = exports.BufferBuilder = void 0;
+exports.uncompressionLZ77 = exports.getVarLen = exports.readTextRecord = exports.readText = exports.parseMobiHeader = exports.parsePalmDDCHeader = exports.parseRecordList = exports.parsePDBHeader = exports.parse = exports.EncryptionType = exports.Compression = void 0;
+const common_1 = require("@webexplorer/common");
 // https://github.com/kovidgoyal/calibre/blob/master/format_docs/pdb/mobi.txt
-class BufferBuilder {
-    constructor(capacity) {
-        this.fragmentIndex = 0;
-        this.fragmentOffset = 0;
-        this.fragments = [];
-        this.capacity = capacity;
-        this.extend();
-    }
-    extend() {
-        const fragment = new Uint8Array(this.capacity);
-        this.fragments.push(fragment);
-        this.fragmentIndex = this.fragments.length - 1;
-        this.fragmentOffset = 0;
-    }
-    write(byte) {
-        if (this.fragmentOffset === this.capacity) {
-            this.extend();
-        }
-        this.fragments[this.fragmentIndex][this.fragmentOffset] = byte;
-        this.fragmentOffset = this.fragmentOffset + 1;
-    }
-    read(offset) {
-        const fragmentIndex = Math.floor(offset / this.capacity);
-        const fragmentOffset = offset - fragmentIndex * this.capacity;
-        return this.fragments[fragmentIndex][fragmentOffset];
-    }
-    length() {
-        const length = (this.fragments.length - 1) * this.capacity + this.fragmentOffset;
-        return length;
-    }
-    combine() {
-        if (this.fragments.length == 0) {
-            return new Uint8Array(0);
-        }
-        const length = this.length();
-        const array = new Uint8Array(length);
-        let offset = 0;
-        this.fragments.forEach((buffer, i) => {
-            if (i !== this.fragments.length - 1) {
-                array.set(buffer, offset);
-                offset += buffer.length;
-            }
-            else {
-                array.set(buffer.slice(0, this.fragmentOffset), offset);
-            }
-        });
-        return array;
-    }
-}
-exports.BufferBuilder = BufferBuilder;
-class Stream {
-    constructor(view) {
-        this.view = view;
-        this.offset = 0;
-    }
-    readStr(len) {
-        const { view, offset } = this;
-        const data = view.buffer.slice(offset, offset + len);
-        this.offset = this.offset + len;
-        return new TextDecoder("utf-8").decode(new Uint8Array(data));
-    }
-    readUint8(len = 1) {
-        const u8 = this.view.getUint8(this.offset);
-        this.offset = this.offset + 1;
-        return u8;
-    }
-    readUint16() {
-        const u16 = this.view.getUint16(this.offset);
-        this.offset = this.offset + 2;
-        return u16;
-    }
-    readUint32() {
-        const u32 = this.view.getUint32(this.offset);
-        this.offset = this.offset + 4;
-        return u32;
-    }
-    forward(len) {
-        this.offset = this.offset + len;
-    }
-    moveTo(offset) {
-        this.offset = offset;
-    }
-}
-exports.Stream = Stream;
 var Compression;
 (function (Compression) {
     Compression[Compression["NoCompression"] = 1] = "NoCompression";
@@ -99,8 +16,7 @@ var EncryptionType;
     EncryptionType[EncryptionType["MobipocketEncryption"] = 2] = "MobipocketEncryption";
 })(EncryptionType = exports.EncryptionType || (exports.EncryptionType = {}));
 function parse(buffer) {
-    const view = new DataView(buffer);
-    const stream = new Stream(view);
+    const stream = new common_1.Stream(buffer);
     const pdbHeader = parsePDBHeader(stream);
     const recordList = parseRecordList(stream, pdbHeader.recordNum);
     const palmDDCHeader = parsePalmDDCHeader(stream, recordList[0]);
@@ -119,7 +35,7 @@ function parse(buffer) {
 }
 exports.parse = parse;
 function parsePDBHeader(stream) {
-    const name = stream.readStr(32);
+    const name = stream.readBytes(32);
     const attr = stream.readUint16();
     const version = stream.readUint16();
     const ctime = stream.readUint32();
@@ -128,13 +44,13 @@ function parsePDBHeader(stream) {
     const modificationNumber = stream.readUint32();
     const appInfoOffset = stream.readUint32();
     const sortInfoOffset = stream.readUint32();
-    const type = stream.readStr(4);
-    const creator = stream.readStr(4);
+    const type = stream.readBytes(4);
+    const creator = stream.readBytes(4);
     const uniquiId = stream.readUint32();
     const nextRec = stream.readUint32();
     const recordNum = stream.readUint16();
     return {
-        name,
+        name: (0, common_1.bytesToString)(name),
         attr,
         version,
         ctime,
@@ -143,8 +59,8 @@ function parsePDBHeader(stream) {
         modificationNumber,
         appInfoOffset,
         sortInfoOffset,
-        type,
-        creator,
+        type: (0, common_1.bytesToString)(type),
+        creator: (0, common_1.bytesToString)(creator),
         uniquiId,
         nextRec,
         recordNum,
@@ -323,7 +239,7 @@ exports.getVarLen = getVarLen;
 function uncompressionLZ77(data) {
     const length = data.length;
     let offset = 0; // Current offset into data
-    let builder = new BufferBuilder(data.length);
+    let builder = new common_1.BufferBuilder(data.length);
     while (offset < length) {
         let char = data[offset];
         offset += 1;

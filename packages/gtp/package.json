@@ -1,14 +1,14 @@
 {
-  "name": "@webexplorer/mobi",
+  "name": "@webexplorer/gtp",
   "version": "0.1.0",
-  "description": "mobi parser",
+  "description": "gtp parser",
   "main": "src/index.js",
   "scripts": {
     "build": "tsc",
     "test": "tape"
   },
   "keywords": [
-    "mobi",
+    "gtp",
     "parser"
   ],
   "author": "Ji Chang",

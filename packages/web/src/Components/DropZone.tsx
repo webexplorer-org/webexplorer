@@ -28,6 +28,7 @@ export function DropZone(props: DropZoneProps) {
             <a
               target="_blank"
               href="https://github.com/exploreronweb/webexplorer/issues/new"
+              rel="noreferrer"
             >
               GitHub
             </a>
@@ -89,6 +90,10 @@ export function DropZone(props: DropZoneProps) {
           <div className="file__list__item">
             <h4>Archive File</h4>
             <p>.zip .rar .tar.gz</p>
+          </div>
+          <div className="file__list__item">
+            <h4>Guitar Pro</h4>
+            <p>.gp3 .gp4 .gp5</p>
           </div>
           <div className="file__list__item">
             <h4>3D Model</h4>

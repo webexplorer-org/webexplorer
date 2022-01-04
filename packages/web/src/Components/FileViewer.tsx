@@ -1,6 +1,7 @@
-import * as mime from "mime";
 import React, { Suspense } from "react";
+import { mimeType } from "../Utils/file";
 import "./FileViewer.css";
+import GtpViewer from "./GtpViewer";
 import { Loading } from "./Loading";
 
 const PdfViewer = React.lazy(() => import("./PdfViewer"));
@@ -20,9 +21,7 @@ export function FileViewer(props: FileViewerProps) {
     return null;
   }
 
-  // @ts-ignore
-  const fileType = file.type || mime.getType(file.name);
-
+  const fileType = mimeType(file);
   let viewer = null;
   switch (fileType) {
     case "application/pdf":
@@ -52,6 +51,9 @@ export function FileViewer(props: FileViewerProps) {
       break;
     case "model/3mf":
       viewer = <ThreeViewer file={file} format="3mf" />;
+      break;
+    case "application/x-gtp":
+      viewer = <GtpViewer file={file} />;
       break;
     default:
       viewer = (

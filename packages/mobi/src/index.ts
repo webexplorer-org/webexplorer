@@ -1,108 +1,6 @@
+import { BufferBuilder, Stream, bytesToString } from "@webexplorer/common";
+
 // https://github.com/kovidgoyal/calibre/blob/master/format_docs/pdb/mobi.txt
-export class BufferBuilder {
-  capacity: number;
-  fragmentIndex: number = 0;
-  fragmentOffset: number = 0;
-  fragments: Uint8Array[] = [];
-
-  constructor(capacity: number) {
-    this.capacity = capacity;
-    this.extend();
-  }
-
-  extend() {
-    const fragment = new Uint8Array(this.capacity);
-    this.fragments.push(fragment);
-    this.fragmentIndex = this.fragments.length - 1;
-    this.fragmentOffset = 0;
-  }
-
-  write(byte: number) {
-    if (this.fragmentOffset === this.capacity) {
-      this.extend();
-    }
-
-    this.fragments[this.fragmentIndex][this.fragmentOffset] = byte;
-    this.fragmentOffset = this.fragmentOffset + 1;
-  }
-
-  read(offset: number) {
-    const fragmentIndex = Math.floor(offset / this.capacity);
-    const fragmentOffset = offset - fragmentIndex * this.capacity;
-    return this.fragments[fragmentIndex][fragmentOffset];
-  }
-
-  length() {
-    const length =
-      (this.fragments.length - 1) * this.capacity + this.fragmentOffset;
-
-    return length;
-  }
-
-  combine() {
-    if (this.fragments.length == 0) {
-      return new Uint8Array(0);
-    }
-
-    const length = this.length();
-    const array = new Uint8Array(length);
-
-    let offset = 0;
-    this.fragments.forEach((buffer, i) => {
-      if (i !== this.fragments.length - 1) {
-        array.set(buffer, offset);
-        offset += buffer.length;
-      } else {
-        array.set(buffer.slice(0, this.fragmentOffset), offset);
-      }
-    });
-
-    return array;
-  }
-}
-
-export class Stream {
-  offset: number;
-  view: DataView;
-
-  constructor(view: DataView) {
-    this.view = view;
-    this.offset = 0;
-  }
-
-  readStr(len: number) {
-    const { view, offset } = this;
-    const data = view.buffer.slice(offset, offset + len);
-    this.offset = this.offset + len;
-    return new TextDecoder("utf-8").decode(new Uint8Array(data));
-  }
-
-  readUint8(len: number = 1) {
-    const u8 = this.view.getUint8(this.offset);
-    this.offset = this.offset + 1;
-    return u8;
-  }
-
-  readUint16() {
-    const u16 = this.view.getUint16(this.offset);
-    this.offset = this.offset + 2;
-    return u16;
-  }
-
-  readUint32() {
-    const u32 = this.view.getUint32(this.offset);
-    this.offset = this.offset + 4;
-    return u32;
-  }
-
-  forward(len: number) {
-    this.offset = this.offset + len;
-  }
-
-  moveTo(offset: number) {
-    this.offset = offset;
-  }
-}
 
 export enum Compression {
   NoCompression = 1,
@@ -187,8 +85,7 @@ export type Mobi = {
 };
 
 export function parse(buffer: ArrayBuffer): Mobi {
-  const view = new DataView(buffer);
-  const stream = new Stream(view);
+  const stream = new Stream(buffer);
   const pdbHeader = parsePDBHeader(stream);
   const recordList = parseRecordList(stream, pdbHeader.recordNum);
   const palmDDCHeader = parsePalmDDCHeader(stream, recordList[0]);
@@ -210,7 +107,7 @@ export function parse(buffer: ArrayBuffer): Mobi {
 }
 
 export function parsePDBHeader(stream: Stream): PDBHeader {
-  const name = stream.readStr(32);
+  const name = stream.readBytes(32);
   const attr = stream.readUint16();
   const version = stream.readUint16();
   const ctime = stream.readUint32();
@@ -219,14 +116,14 @@ export function parsePDBHeader(stream: Stream): PDBHeader {
   const modificationNumber = stream.readUint32();
   const appInfoOffset = stream.readUint32();
   const sortInfoOffset = stream.readUint32();
-  const type = stream.readStr(4);
-  const creator = stream.readStr(4);
+  const type = stream.readBytes(4);
+  const creator = stream.readBytes(4);
   const uniquiId = stream.readUint32();
   const nextRec = stream.readUint32();
   const recordNum = stream.readUint16();
 
   return {
-    name,
+    name: bytesToString(name),
     attr,
     version,
     ctime,
@@ -235,8 +132,8 @@ export function parsePDBHeader(stream: Stream): PDBHeader {
     modificationNumber,
     appInfoOffset,
     sortInfoOffset,
-    type,
-    creator,
+    type: bytesToString(type),
+    creator: bytesToString(creator),
     uniquiId,
     nextRec,
     recordNum,

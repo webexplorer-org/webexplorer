@@ -1,0 +1,8 @@
+.gtp__viewer {
+  margin: 1rem;
+}
+
+.gtp__viewer iframe {
+  width: 100%;
+  height: calc(100vh - 6rem);
+}
