@@ -93,7 +93,7 @@ export function DropZone(props: DropZoneProps) {
           </div>
           <div className="file__list__item">
             <h4>Guitar Pro</h4>
-            <p>.gp3 .gp4 .gp5</p>
+            <p>.gp3</p>
           </div>
           <div className="file__list__item">
             <h4>3D Model</h4>

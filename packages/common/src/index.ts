@@ -70,6 +70,18 @@ export class Stream {
     this.offset = 0;
   }
 
+  readByte() {
+    const byte = this.view.getInt8(this.offset);
+    this.offset = this.offset + 1;
+    return byte;
+  }
+
+  readUByte() {
+    const u8 = this.view.getUint8(this.offset);
+    this.offset = this.offset + 1;
+    return u8;
+  }
+
   readBytes(len: number) {
     const { view, offset } = this;
     const data = view.buffer.slice(offset, offset + len);

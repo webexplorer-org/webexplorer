@@ -2,7 +2,17 @@
   margin: 1rem;
 }
 
-.gtp__viewer iframe {
-  width: 100%;
-  height: calc(100vh - 6rem);
+.gtp__viewer h4 {
+  margin: 2rem 0 0.5rem 0;
+
+  font-size: 1.5rem;
+
+  text-align: center;
+}
+
+.gtp__viewer p {
+  margin: 0.25rem 0;
+
+  font-size: 1rem;
+  text-align: center;
 }
