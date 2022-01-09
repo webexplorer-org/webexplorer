@@ -1,3 +1,9 @@
+export interface Version {
+  raw: string;
+  major: string;
+  minor: string;
+}
+
 export interface RepeatGroup {
   isClosed: boolean;
   measureHeaders: MeasureHeader[];
@@ -20,13 +26,23 @@ export function addMeasureHeader(
   }
 }
 
-export const CLIPBOARD = {
-  MeasureStart: 1,
-  MeasureStop: 1,
-  TrackStart: 1,
-  TrackEnd: 1,
-  BeatStart: 1,
-  BeatStop: 1,
+export interface Clipboard {
+  startMeasure: number;
+  stopMeasure: number;
+  startTrack: number;
+  stopTrack: number;
+  startBeat: number;
+  stopBeat: number;
+  subBarCopy: boolean;
+}
+
+export const CLIPBOARD: Clipboard = {
+  startMeasure: 1,
+  stopMeasure: 1,
+  startTrack: 1,
+  stopTrack: 1,
+  startBeat: 1,
+  stopBeat: 1,
   subBarCopy: false,
 };
 
@@ -126,9 +142,7 @@ export interface RSEMasterEffect {
   equalizer: RSEEqualizer;
 }
 
-export interface Song {
-  clipboard?: Clipboard;
-  version: string;
+export interface SongInfo {
   title: string;
   subtitle: string;
   artist: string;
@@ -139,7 +153,14 @@ export interface Song {
   tab: string;
   instructions: string;
   notices: string[];
+}
+
+export interface Song {
+  version: Version;
+  clipboard?: Clipboard;
+  info: SongInfo;
   lyrics: Lyrics;
+  tempoName?: string;
   tempo: number;
   key: KeySignature;
   repeatGroups: RepeatGroup[];
@@ -369,7 +390,6 @@ export enum SlapEffect {
 }
 
 export interface BeatEffect {
-  flag: number;
   hasRasgueado: boolean;
   stroke: BeatStroke;
   pickStroke: BeatStrokeDirection;

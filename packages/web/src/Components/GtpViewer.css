@@ -16,3 +16,44 @@
   font-size: 1rem;
   text-align: center;
 }
+
+.gtp__viewer .tab {
+  display: grid;
+  column-gap: 1rem;
+  row-gap: 1rem;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+
+  width: 100%;
+}
+
+.gtp__viewer .voice {
+  display: flex;
+  flex-direction: row;
+
+  width: 100%;
+}
+
+.gtp__viewer .beat {
+  flex: 1;
+}
+
+.gtp__viewer .guitar__string {
+  position: relative;
+  display: inline-block;
+
+  width: 100%;
+  height: 1px;
+
+  background-color: black;
+  background-position: center center;
+}
+
+.gtp__viewer .note {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  padding: 0;
+
+  transform: translate(-50%, -50%);
+}

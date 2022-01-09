@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Song, parse } from "@webexplorer/gtp";
 import "./GtpViewer.css";
 
@@ -16,8 +16,10 @@ export function GtpViewer(props: GtpViewerProps) {
       const reader = new FileReader();
       reader.onload = () => {
         const gtp = parse(reader.result as ArrayBuffer);
-        console.log(gtp);
-        setGtp(gtp);
+        if (gtp) {
+          console.log(gtp);
+          setGtp(gtp);
+        }
       };
 
       reader.readAsArrayBuffer(file);
@@ -35,12 +37,14 @@ export function GtpViewer(props: GtpViewerProps) {
   return (
     <div className="gtp__viewer">
       <header>
-        <h4>{gtp.title}</h4>
-        <p>{gtp.artist}</p>
-        <p>{gtp.album}</p>
+        <h4>{gtp.info.title}</h4>
+        <p>{gtp.info.artist}</p>
+        <p>{gtp.info.album}</p>
       </header>
       <div>
+        <label htmlFor="track-select">Track: </label>
         <select
+          id="track-select"
           value={trackIndex}
           onChange={(evt) => {
             setTrackIndex(parseInt(evt.target.value, 10));
@@ -54,32 +58,41 @@ export function GtpViewer(props: GtpViewerProps) {
             );
           })}
         </select>
-        {gtp.measureHeaders.map((measureHeader, measureIndex) => {
-          const measure = track.measures[measureIndex];
-          return (
-            <div className="measure" key={measureIndex}>
-              {measure.voices.map((voice, voiceIndex) => {
-                return (
-                  <div key={voiceIndex} className="voice">
-                    {voice.beats.map((beat, beatIndex) => {
-                      return (
-                        <div className="beat" key={beatIndex}>
-                          {beat.notes.map((note, noteIndex) => {
-                            return (
-                              <div className="note" key={noteIndex}>
-                                <p>{JSON.stringify(note)}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className="tab">
+          {gtp.measureHeaders.map((measureHeader, measureIndex) => {
+            const measure = track.measures[measureIndex];
+            return (
+              <div className="measure" key={measureIndex}>
+                {measure.voices.map((voice, voiceIndex) => {
+                  return (
+                    <div key={voiceIndex} className="voice">
+                      {voice.beats.map((beat, beatIndex) => {
+                        return (
+                          <div className="beat" key={beatIndex}>
+                            {track.strings.map((string, stringIndex) => {
+                              const note = beat.notes.find((note) => {
+                                return note.string === string.index;
+                              });
+
+                              return (
+                                <div
+                                  className="guitar__string"
+                                  key={stringIndex}
+                                >
+                                  <p className="note">{note?.value}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
