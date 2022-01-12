@@ -2,6 +2,7 @@ import * as mime from "mime";
 
 const typeMap = {
   "application/x-gtp": ["gp3", "gp4", "gp5"],
+  "application/x-azw3": ["azw3"],
 };
 
 mime.define(typeMap);

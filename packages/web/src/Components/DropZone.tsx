@@ -73,33 +73,45 @@ export function DropZone(props: DropZoneProps) {
         <p>Drag and drop file here</p>
       </div>
       <div>
-        <h3>Support File Types</h3>
-        <div className="file__list">
-          <div className="file__list__item">
-            <h4>PDF File</h4>
-            <p>.pdf</p>
-          </div>
-          <div className="file__list__item">
-            <h4>EPUB File</h4>
-            <p>.epub</p>
-          </div>
-          <div className="file__list__item">
-            <h4>Mobi File</h4>
-            <p>.mobi</p>
-          </div>
-          <div className="file__list__item">
-            <h4>Archive File</h4>
-            <p>.zip .rar .tar.gz</p>
-          </div>
-          <div className="file__list__item">
-            <h4>Guitar Pro</h4>
-            <p>.gp3 .gp4</p>
-          </div>
-          <div className="file__list__item">
-            <h4>3D Model</h4>
-            <p>.gltf .stl .3mf .obj</p>
-          </div>
-        </div>
+        <h3>Supported Files</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Extension</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>PDF File</td>
+              <td>.pdf</td>
+            </tr>
+            <tr>
+              <td>EPUB File</td>
+              <td>.epub</td>
+            </tr>
+            <tr>
+              <td>Mobi File</td>
+              <td>.mobi</td>
+            </tr>
+            <tr>
+              <td>Azw3 File</td>
+              <td>.azw3 (limited supported)</td>
+            </tr>
+            <tr>
+              <td>Archive File</td>
+              <td>.zip .rar .tar.gz</td>
+            </tr>
+            <tr>
+              <td>Guitar Pro</td>
+              <td>.gp3 .gp4</td>
+            </tr>
+            <tr>
+              <td>3D Model</td>
+              <td>.gltf .stl .3mf .obj</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

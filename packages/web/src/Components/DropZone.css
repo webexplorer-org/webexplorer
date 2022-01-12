@@ -21,24 +21,16 @@
   margin: 2rem 0 0.5rem 0;
 }
 
-.file__list {
-  display: grid;
-  column-gap: 1rem;
-  row-gap: 1rem;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-
+.dropzone table {
   width: 100%;
+
+  border-collapse: collapse;
 }
 
-.file__list__item {
-  padding: 0.5rem 1rem;
-  border: 1px solid #ccc;
-}
+.dropzone th,
+.dropzone td {
+  padding: 0.5rem;
+  border: 1px solid #c0c0c0;
 
-.file__list__item h4 {
-  margin: 0.5rem 0;
-}
-
-.file__list__item p {
-  margin: 0.5rem 0;
+  text-align: left;
 }
