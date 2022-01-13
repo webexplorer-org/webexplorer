@@ -1,0 +1,14 @@
+choose-file = Choose File
+zh-CN = 简体中文
+en-US = English
+supported-files = Supported Files
+drag-and-drop-file-here = Drag and drop file here
+file = File
+extension = Extension
+pdf-file = PDF File
+epub-file = EPub File
+mobi-file = Mobi File
+azw3-file = Azw3 File
+archive-file = Archive File
+guitar-tab-file = GuitarPro File
+threed-model-file = 3D Model File

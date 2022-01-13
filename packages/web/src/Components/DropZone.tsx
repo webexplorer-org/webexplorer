@@ -1,4 +1,5 @@
 import "./DropZone.css";
+import { Localized } from "@fluent/react";
 
 export interface DropZoneProps {
   onDropFile: (file: File) => void;
@@ -70,44 +71,66 @@ export function DropZone(props: DropZoneProps) {
           }
         }}
       >
-        <p>Drag and drop file here</p>
+        <Localized id="drag-and-drop-file-here">
+          <p>Drag and drop file here</p>
+        </Localized>
       </div>
       <div>
-        <h3>Supported Files</h3>
+        <Localized id="supported-files">
+          <h3>Supported Files</h3>
+        </Localized>
         <table>
           <thead>
             <tr>
-              <th>File</th>
-              <th>Extension</th>
+              <th>
+                <Localized id="file">File</Localized>
+              </th>
+              <th>
+                <Localized id="extension">Extension</Localized>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>PDF File</td>
+              <td>
+                <Localized id="pdf-file">PDF File</Localized>
+              </td>
               <td>.pdf</td>
             </tr>
             <tr>
-              <td>EPUB File</td>
+              <td>
+                <Localized id="epub-file">EPUB File</Localized>
+              </td>
               <td>.epub</td>
             </tr>
             <tr>
-              <td>Mobi File</td>
+              <td>
+                <Localized id="mobi-file">Mobi File</Localized>
+              </td>
               <td>.mobi</td>
             </tr>
             <tr>
-              <td>Azw3 File</td>
+              <td>
+                <Localized id="azw3-file">Azw3 File</Localized>
+              </td>
               <td>.azw3 (limited supported)</td>
             </tr>
             <tr>
-              <td>Archive File</td>
+              <td>
+                <Localized id="archive-file">Archive File</Localized>
+              </td>
               <td>.zip .rar .tar.gz</td>
             </tr>
             <tr>
-              <td>Guitar Pro</td>
+              <td>
+                <Localized id="guitar-tab-file">Guitar Tab File</Localized>
+              </td>
               <td>.gp3 .gp4</td>
             </tr>
             <tr>
-              <td>3D Model</td>
+              <td>
+                <Localized id="threed-model-file">3D Model File</Localized>
+              </td>
               <td>.gltf .stl .3mf .obj</td>
             </tr>
           </tbody>
