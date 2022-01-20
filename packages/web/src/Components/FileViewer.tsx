@@ -9,6 +9,7 @@ const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
 const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
 const EPubViewer = React.lazy(() => import("./EPubViewer"));
 const MobiViewer = React.lazy(() => import("./MobiViewer"));
+const MsgViewer = React.lazy(() => import("./MsgViewer"));
 
 export interface FileViewerProps {
   file: File | null;
@@ -55,6 +56,9 @@ export function FileViewer(props: FileViewerProps) {
       break;
     case "application/x-gtp":
       viewer = <GtpViewer file={file} />;
+      break;
+    case "application/vnd.ms-outlook":
+      viewer = <MsgViewer file={file} />;
       break;
     default:
       viewer = (
