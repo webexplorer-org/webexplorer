@@ -16,6 +16,7 @@
   "dependencies": {
     "@webexplorer/archive": "^0.1.0",
     "@webexplorer/common": "^0.1.0",
+    "@webexplorer/specs": "^0.1.0",
     "typescript": "^4.5.4"
   }
 }

@@ -1,4 +1,14 @@
-import { BufferBuilder, Stream, bytesToString } from "@webexplorer/common";
+import {
+  Stream,
+  any,
+  repeat,
+  Parser,
+  sequence,
+  map,
+  match,
+  varLen,
+} from "@webexplorer/specs";
+import { BufferBuilder, bytesToString } from "@webexplorer/common";
 
 // https://github.com/kovidgoyal/calibre/blob/master/format_docs/pdb/mobi.txt
 
@@ -26,9 +36,8 @@ export type PDBHeader = {
   sortInfoOffset: number;
   type: string;
   creator: string;
-  uniquiId: number;
+  uniqueId: number;
   nextRec: number;
-  recordNum: number;
 };
 
 export type Record = {
@@ -104,59 +113,6 @@ export function parse(buffer: ArrayBuffer): Mobi {
     metadata,
     text,
   };
-}
-
-export function parsePDBHeader(stream: Stream): PDBHeader {
-  const name = stream.readBytes(32);
-  const attr = stream.readUint16();
-  const version = stream.readUint16();
-  const ctime = stream.readUint32();
-  const mtime = stream.readUint32();
-  const btime = stream.readUint32();
-  const modificationNumber = stream.readUint32();
-  const appInfoOffset = stream.readUint32();
-  const sortInfoOffset = stream.readUint32();
-  const type = stream.readBytes(4);
-  const creator = stream.readBytes(4);
-  const uniquiId = stream.readUint32();
-  const nextRec = stream.readUint32();
-  const recordNum = stream.readUint16();
-
-  return {
-    name: bytesToString(name),
-    attr,
-    version,
-    ctime,
-    mtime,
-    btime,
-    modificationNumber,
-    appInfoOffset,
-    sortInfoOffset,
-    type: bytesToString(type),
-    creator: bytesToString(creator),
-    uniquiId,
-    nextRec,
-    recordNum,
-  };
-}
-
-export function parseRecordList(stream: Stream, num: number) {
-  const recordList: Record[] = [];
-
-  for (let i = 0; i < num; i++) {
-    const offset = stream.readUint32();
-    const extra = stream.readUint32();
-    const attr = extra & 0xff000000;
-    const uniqueId = extra & 0x000000ff;
-
-    recordList.push({
-      offset,
-      attr,
-      uniqueId,
-    });
-  }
-
-  return recordList;
 }
 
 export function parsePalmDDCHeader(stream: Stream, record: Record) {
@@ -374,4 +330,121 @@ export function uncompressionLZ77(data: Uint8Array) {
   }
 
   return builder;
+}
+
+const pdbHeaderSubParsers: [
+  Parser<number[]>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number[]>,
+  Parser<number[]>,
+  Parser<number>,
+  Parser<number>
+] = [
+  repeat(32, any("Uint8")),
+  any("Uint16"),
+  any("Uint16"),
+  any("Uint32"),
+  any("Uint32"),
+  any("Uint32"),
+  any("Uint32"),
+  any("Uint32"),
+  any("Uint32"),
+  repeat(4, any("Uint8")),
+  repeat(4, any("Uint8")),
+  any("Uint32"),
+  any("Uint32"),
+];
+
+const pdbHeaderParser: Parser<PDBHeader> = map(
+  sequence(pdbHeaderSubParsers),
+  ([
+    name,
+    attr,
+    version,
+    ctime,
+    mtime,
+    btime,
+    modificationNumber,
+    appInfoOffset,
+    sortInfoOffset,
+    type,
+    creator,
+    uniqueId,
+    nextRec,
+  ]) => {
+    return {
+      name: bytesToString(new Uint8Array(name)),
+      attr,
+      version,
+      ctime,
+      mtime,
+      btime,
+      modificationNumber,
+      appInfoOffset,
+      sortInfoOffset,
+      type: bytesToString(new Uint8Array(type)),
+      creator: bytesToString(new Uint8Array(creator)),
+      uniqueId,
+      nextRec,
+    };
+  }
+);
+
+const recordListParser: Parser<Record[]> = varLen(
+  "Uint16",
+  map(
+    sequence([any("Uint32"), any("Uint32")] as [
+      Parser<number>,
+      Parser<number>
+    ]),
+    ([offset, extra]) => {
+      const attr = extra & 0xff000000;
+      const uniqueId = extra & 0x000000ff;
+
+      return {
+        offset,
+        attr,
+        uniqueId,
+      };
+    }
+  )
+);
+
+const mobiSubParsers: [Parser<PDBHeader>, Parser<Record[]>] = [
+  pdbHeaderParser,
+  recordListParser,
+];
+
+export function palmDDCHeaderParser(stream: Stream, record: Record) {
+  stream.moveTo(record.offset);
+
+  const compression = stream.readUint16();
+  stream.forward(2);
+  const textLength = stream.readUint32();
+  const recordCount = stream.readUint16();
+  const recordSize = stream.readUint16();
+  const encryptionType = stream.readUint16();
+  stream.forward(2);
+
+  return {
+    compression,
+    textLength,
+    recordCount,
+    recordSize,
+    encryptionType,
+  };
+}
+
+export const mobiParser = sequence(mobiSubParsers);
+
+export function parse(buffer: ArrayBuffer) {
+  const stream = new Stream(buffer);
+  const pdbHeader = match(stream, mobiParser);
 }

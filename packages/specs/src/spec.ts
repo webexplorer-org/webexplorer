@@ -30,10 +30,18 @@ export function error<E>(value: E): Err<E> {
   };
 }
 
+export function isErr<E, T>(result: Result<E, T>): result is Err<E> {
+  return result.kind === "error";
+}
+
 export type Parser<T> = (stream: Stream) => Result<Error, T>;
 
-export function ignore(): Parser<undefined> {
+export function skip(dataType: DataType, len: number): Parser<undefined> {
   return (stream: Stream) => {
+    for (let i = 0; i < len; i++) {
+      stream.read(dataType);
+    }
+
     return ok(undefined);
   };
 }
@@ -140,14 +148,14 @@ export function varLen<T>(
 
 export function map<U, T>(
   valueParser: Parser<U>,
-  mapper: (u: U) => Parser<T>
+  mapper: (u: U) => T
 ): Parser<T> {
   return (stream: Stream) => {
     const valueResult = valueParser(stream);
     if (isOk(valueResult)) {
       const value = valueResult.value;
-      const parser = mapper(value);
-      return parser(stream);
+      const mapped = mapper(value);
+      return ok(mapped);
     } else {
       const err: Result<Error, T[]> = error(valueResult.value);
       return err;
@@ -183,7 +191,7 @@ export function sequence<U extends Array<Parser<any>>>(
   };
 }
 
-export function parser<T>(stream: Stream, parser: Parser<T>) {
+export function match<T>(stream: Stream, parser: Parser<T>) {
   try {
     return parser(stream);
   } catch (e) {

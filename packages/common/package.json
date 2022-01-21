@@ -1,5 +1,5 @@
 {
-  "name": "@webexplorer/specs",
+  "name": "@webexplorer/common",
   "version": "0.1.0",
   "description": "specs utilities for file parser",
   "main": "src/index.js",
