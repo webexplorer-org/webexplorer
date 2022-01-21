@@ -1,12 +1,18 @@
 import {
   Stream,
-  any,
   repeat,
   Parser,
   sequence,
   map,
   match,
   varLen,
+  moveTo,
+  uint8,
+  uint16,
+  uint32,
+  skip,
+  pipe,
+  slice,
 } from "@webexplorer/specs";
 import { BufferBuilder, bytesToString } from "@webexplorer/common";
 
@@ -93,11 +99,8 @@ export type Mobi = {
   text: string;
 };
 
-export function parse(buffer: ArrayBuffer): Mobi {
+export function parse_(buffer: ArrayBuffer): Mobi {
   const stream = new Stream(buffer);
-  const pdbHeader = parsePDBHeader(stream);
-  const recordList = parseRecordList(stream, pdbHeader.recordNum);
-  const palmDDCHeader = parsePalmDDCHeader(stream, recordList[0]);
   const mobiHeader = parseMobiHeader(stream);
 
   const metadata = {
@@ -112,26 +115,6 @@ export function parse(buffer: ArrayBuffer): Mobi {
   return {
     metadata,
     text,
-  };
-}
-
-export function parsePalmDDCHeader(stream: Stream, record: Record) {
-  stream.moveTo(record.offset);
-
-  const compression = stream.readUint16();
-  stream.forward(2);
-  const textLength = stream.readUint32();
-  const recordCount = stream.readUint16();
-  const recordSize = stream.readUint16();
-  const encryptionType = stream.readUint16();
-  stream.forward(2);
-
-  return {
-    compression,
-    textLength,
-    recordCount,
-    recordSize,
-    encryptionType,
   };
 }
 
@@ -240,7 +223,6 @@ export function readTextRecord(
   const end = recordList[index + 1].offset;
 
   let data = new Uint8Array(stream.view.buffer.slice(begin, end));
-  console.log(data.byteLength, data[0], data[data.byteLength - 1]);
 
   let pos = data.length - 1;
   let extra = 0;
@@ -263,7 +245,6 @@ export function readTextRecord(
   if (palmDDCHeader.compression === Compression.PalmDDC) {
     const buffer = uncompressionLZ77(data);
     data = buffer.combine();
-    console.log(data.byteLength, data[0], data[data.byteLength - 1]);
     return data;
   } else {
     return data;
@@ -347,19 +328,19 @@ const pdbHeaderSubParsers: [
   Parser<number>,
   Parser<number>
 ] = [
-  repeat(32, any("Uint8")),
-  any("Uint16"),
-  any("Uint16"),
-  any("Uint32"),
-  any("Uint32"),
-  any("Uint32"),
-  any("Uint32"),
-  any("Uint32"),
-  any("Uint32"),
-  repeat(4, any("Uint8")),
-  repeat(4, any("Uint8")),
-  any("Uint32"),
-  any("Uint32"),
+  repeat(32, uint8()),
+  uint16(),
+  uint16(),
+  uint32(),
+  uint32(),
+  uint32(),
+  uint32(),
+  uint32(),
+  uint32(),
+  repeat(4, uint8()),
+  repeat(4, uint8()),
+  uint32(),
+  uint32(),
 ];
 
 const pdbHeaderParser: Parser<PDBHeader> = map(
@@ -400,10 +381,7 @@ const pdbHeaderParser: Parser<PDBHeader> = map(
 const recordListParser: Parser<Record[]> = varLen(
   "Uint16",
   map(
-    sequence([any("Uint32"), any("Uint32")] as [
-      Parser<number>,
-      Parser<number>
-    ]),
+    sequence([uint32(), uint32()] as [Parser<number>, Parser<number>]),
     ([offset, extra]) => {
       const attr = extra & 0xff000000;
       const uniqueId = extra & 0x000000ff;
@@ -417,30 +395,149 @@ const recordListParser: Parser<Record[]> = varLen(
   )
 );
 
-const mobiSubParsers: [Parser<PDBHeader>, Parser<Record[]>] = [
-  pdbHeaderParser,
-  recordListParser,
+export function palmDDCHeaderParser(records: Record[]): Parser<PalmDDCHeader> {
+  const record = records[0];
+  const subParsers: [
+    Parser<undefined>,
+    Parser<number>,
+    Parser<undefined>,
+    Parser<number>,
+    Parser<number>,
+    Parser<number>,
+    Parser<number>,
+    Parser<undefined>
+  ] = [
+    moveTo(record.offset),
+    uint16(),
+    skip("Uint8", 2),
+    uint32(),
+    uint16(),
+    uint16(),
+    uint16(),
+    skip("Uint8", 2),
+  ];
+
+  return map(
+    sequence(subParsers),
+    ([
+      _,
+      compression,
+      _skip1,
+      textLength,
+      recordCount,
+      recordSize,
+      encryptionType,
+      _skip2,
+    ]) => {
+      return {
+        compression,
+        textLength,
+        recordCount,
+        recordSize,
+        encryptionType,
+      };
+    }
+  );
+}
+
+export const mobiHeaderSliceParser: [
+  Parser<number>,
+  Parser<number>,
+  Parser<number>,
+  Parser<number>
+] = [uint32(), uint32(), uint32(), uint32()];
+
+export const mobiHeaderSubParsers: [Parser<number>, Parser<[number, any]>] = [
+  uint32(),
+  pipe(uint32(), slice(sequence(mobiHeaderSliceParser))),
 ];
 
-export function palmDDCHeaderParser(stream: Stream, record: Record) {
-  stream.moveTo(record.offset);
+export const mobiHeaderParser = map(sequence(mobiHeaderSubParsers), () => {
+  return {};
+});
 
-  const compression = stream.readUint16();
-  stream.forward(2);
-  const textLength = stream.readUint32();
-  const recordCount = stream.readUint16();
-  const recordSize = stream.readUint16();
-  const encryptionType = stream.readUint16();
-  stream.forward(2);
+/*
+  const startOffset = stream.offset;
+
+  const identifier = stream.readUint32();
+  const headerLength = stream.readUint32();
+  const mobiType = stream.readUint32();
+  const textEncoding = stream.readUint32();
+  const uniqueId = stream.readUint32();
+  const generatorVersion = stream.readUint32();
+
+  stream.forward(40);
+
+  const firstNonbookIndex = stream.readUint32();
+  const fullNameOffset = stream.readUint32();
+  const fullNameLength = stream.readUint32();
+
+  const language = stream.readUint32();
+  const inputLanguage = stream.readUint32();
+  const outputLanguage = stream.readUint32();
+  const formatVersion = stream.readUint32();
+  const firstImageIdx = stream.readUint32();
+
+  const huffRecIndex = stream.readUint32();
+  const huffRecCount = stream.readUint32();
+  const datpRecIndex = stream.readUint32();
+  const datpRecCount = stream.readUint32();
+
+  const exthFlags = stream.readUint32();
+
+  stream.forward(36);
+
+  const drmOffset = stream.readUint32();
+  const drmCount = stream.readUint32();
+  const drmSize = stream.readUint32();
+  const drmFlags = stream.readUint32();
+
+  stream.forward(8);
+
+  stream.forward(4);
+
+  stream.forward(46);
+
+  const extraFlags = stream.readUint16();
+
+  stream.moveTo(startOffset + headerLength);
 
   return {
-    compression,
-    textLength,
-    recordCount,
-    recordSize,
-    encryptionType,
-  };
-}
+    identifier,
+    headerLength,
+    mobiType,
+    textEncoding,
+    uniqueId,
+    generatorVersion,
+    firstNonbookIndex,
+    fullNameOffset,
+    fullNameLength,
+    language,
+    inputLanguage,
+    outputLanguage,
+    formatVersion,
+    firstImageIdx,
+    huffRecIndex,
+    huffRecCount,
+    datpRecIndex,
+    datpRecCount,
+    exthFlags,
+    drmOffset,
+    drmCount,
+    drmSize,
+    drmFlags,
+    extraFlags,
+  };*/
+
+const mobiSubParsers: [
+  Parser<PDBHeader>,
+  Parser<[Record[], PalmDDCHeader]>,
+  Parser<MobiHeader>
+] = [
+  pdbHeaderParser,
+  pipe(recordListParser, palmDDCHeaderParser),
+  mobiHeaderParser,
+];
 
 export const mobiParser = sequence(mobiSubParsers);
 

@@ -46,6 +46,14 @@ export function skip(dataType: DataType, len: number): Parser<undefined> {
   };
 }
 
+export function moveTo(offset: number): Parser<undefined> {
+  return (stream: Stream) => {
+    stream.moveTo(offset);
+
+    return ok(undefined);
+  };
+}
+
 export function any(dataType: DataType): Parser<number> {
   return (stream: Stream) => {
     const num = stream[`read${dataType}`]();
@@ -98,24 +106,6 @@ export function constant<
   };
 }
 
-export function repeat<T>(count: number, parser: Parser<T>): Parser<T[]> {
-  return (stream: Stream) => {
-    const values: T[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const result = parser(stream);
-      if (isOk(result)) {
-        values.push(result.value);
-      } else {
-        const err: Result<Error, T> = error(result.value);
-        return err;
-      }
-    }
-
-    return ok(values);
-  };
-}
-
 export function varLen<T>(
   lengthDataType: DataType,
   parser: Parser<T>
@@ -157,9 +147,50 @@ export function map<U, T>(
       const mapped = mapper(value);
       return ok(mapped);
     } else {
-      const err: Result<Error, T[]> = error(valueResult.value);
+      const err: Result<Error, T> = error(valueResult.value);
       return err;
     }
+  };
+}
+
+export function pipe<U, T>(
+  prevParser: Parser<U>,
+  lift: (u: U) => Parser<T>
+): Parser<[U, T]> {
+  return (stream: Stream) => {
+    const valueResult = prevParser(stream);
+    if (isOk(valueResult)) {
+      const value = valueResult.value;
+      const pipedResult = lift(value)(stream);
+      if (isOk(pipedResult)) {
+        const result: [U, T] = [valueResult.value, pipedResult.value];
+        return ok(result);
+      } else {
+        const err: Result<Error, [U, T]> = error(pipedResult.value);
+        return err;
+      }
+    } else {
+      const err: Result<Error, [U, T]> = error(valueResult.value);
+      return err;
+    }
+  };
+}
+
+export function repeat<T>(count: number, parser: Parser<T>): Parser<T[]> {
+  return (stream: Stream) => {
+    const values: T[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const result = parser(stream);
+      if (isOk(result)) {
+        values.push(result.value);
+      } else {
+        const err: Result<Error, T> = error(result.value);
+        return err;
+      }
+    }
+
+    return ok(values);
   };
 }
 
@@ -188,6 +219,22 @@ export function sequence<U extends Array<Parser<any>>>(
     }
 
     return ok(values);
+  };
+}
+
+export function slice<T>(
+  parser: Parser<T>
+): (len: number) => Parser<[T, undefined]> {
+  return (len: number) => {
+    return (stream: Stream) => {
+      const offset = stream.offset;
+
+      const subParsers: [Parser<T>, Parser<undefined>] = [
+        parser,
+        moveTo(offset + len),
+      ];
+      return sequence(subParsers)(stream);
+    };
   };
 }
 
