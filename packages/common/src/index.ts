@@ -137,3 +137,41 @@ export class Stream {
 export function bytesToString(bytes: Uint8Array) {
   return new TextDecoder("utf-8").decode(bytes);
 }
+
+export interface Ok<T> {
+  kind: "ok";
+  value: T;
+}
+
+export interface Err<E> {
+  kind: "error";
+  value: E;
+}
+
+export type Result<E, T> = Ok<T> | Err<E>;
+
+export function ok<T>(value: T): Ok<T> {
+  return {
+    kind: "ok",
+    value,
+  };
+}
+
+export function isOk<E, T>(result: Result<E, T>): result is Ok<T> {
+  return result.kind === "ok";
+}
+
+export function error<E>(value: E): Err<E> {
+  return {
+    kind: "error",
+    value,
+  };
+}
+
+export function isErr<E, T>(result: Result<E, T>): result is Err<E> {
+  return result.kind === "error";
+}
+
+export function mapErr<E, T>(err: Err<E>): Result<E, T> {
+  return error(err.value);
+}

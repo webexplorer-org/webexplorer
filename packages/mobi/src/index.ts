@@ -1,6 +1,5 @@
 import {
   Stream,
-  repeat,
   Parser,
   sequence,
   map,
@@ -13,8 +12,16 @@ import {
   skip,
   pipe,
   slice,
+  repeat,
 } from "@webexplorer/specs";
-import { BufferBuilder, bytesToString } from "@webexplorer/common";
+import {
+  BufferBuilder,
+  bytesToString,
+  ok,
+  isOk,
+  mapErr,
+  Result,
+} from "@webexplorer/common";
 
 // https://github.com/kovidgoyal/calibre/blob/master/format_docs/pdb/mobi.txt
 
@@ -98,99 +105,6 @@ export type Mobi = {
   metadata: MobiMetadata;
   text: string;
 };
-
-export function parse_(buffer: ArrayBuffer): Mobi {
-  const stream = new Stream(buffer);
-  const mobiHeader = parseMobiHeader(stream);
-
-  const metadata = {
-    pdbHeader,
-    recordList,
-    palmDDCHeader,
-    mobiHeader,
-  };
-
-  const text = readText(stream, metadata);
-
-  return {
-    metadata,
-    text,
-  };
-}
-
-export function parseMobiHeader(stream: Stream) {
-  const startOffset = stream.offset;
-
-  const identifier = stream.readUint32();
-  const headerLength = stream.readUint32();
-  const mobiType = stream.readUint32();
-  const textEncoding = stream.readUint32();
-  const uniqueId = stream.readUint32();
-  const generatorVersion = stream.readUint32();
-
-  stream.forward(40);
-
-  const firstNonbookIndex = stream.readUint32();
-  const fullNameOffset = stream.readUint32();
-  const fullNameLength = stream.readUint32();
-
-  const language = stream.readUint32();
-  const inputLanguage = stream.readUint32();
-  const outputLanguage = stream.readUint32();
-  const formatVersion = stream.readUint32();
-  const firstImageIdx = stream.readUint32();
-
-  const huffRecIndex = stream.readUint32();
-  const huffRecCount = stream.readUint32();
-  const datpRecIndex = stream.readUint32();
-  const datpRecCount = stream.readUint32();
-
-  const exthFlags = stream.readUint32();
-
-  stream.forward(36);
-
-  const drmOffset = stream.readUint32();
-  const drmCount = stream.readUint32();
-  const drmSize = stream.readUint32();
-  const drmFlags = stream.readUint32();
-
-  stream.forward(8);
-
-  stream.forward(4);
-
-  stream.forward(46);
-
-  const extraFlags = stream.readUint16();
-
-  stream.moveTo(startOffset + headerLength);
-
-  return {
-    identifier,
-    headerLength,
-    mobiType,
-    textEncoding,
-    uniqueId,
-    generatorVersion,
-    firstNonbookIndex,
-    fullNameOffset,
-    fullNameLength,
-    language,
-    inputLanguage,
-    outputLanguage,
-    formatVersion,
-    firstImageIdx,
-    huffRecIndex,
-    huffRecCount,
-    datpRecIndex,
-    datpRecCount,
-    exthFlags,
-    drmOffset,
-    drmCount,
-    drmSize,
-    drmFlags,
-    extraFlags,
-  };
-}
 
 export function readText(stream: Stream, metadata: MobiMetadata) {
   const { palmDDCHeader } = metadata;
@@ -313,38 +227,22 @@ export function uncompressionLZ77(data: Uint8Array) {
   return builder;
 }
 
-const pdbHeaderSubParsers: [
-  Parser<number[]>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number[]>,
-  Parser<number[]>,
-  Parser<number>,
-  Parser<number>
-] = [
-  repeat(32, uint8()),
-  uint16(),
-  uint16(),
-  uint32(),
-  uint32(),
-  uint32(),
-  uint32(),
-  uint32(),
-  uint32(),
-  repeat(4, uint8()),
-  repeat(4, uint8()),
-  uint32(),
-  uint32(),
-];
-
 const pdbHeaderParser: Parser<PDBHeader> = map(
-  sequence(pdbHeaderSubParsers),
+  sequence([
+    repeat(32, uint8()),
+    uint16(),
+    uint16(),
+    uint32(),
+    uint32(),
+    uint32(),
+    uint32(),
+    uint32(),
+    uint32(),
+    repeat(4, uint8()),
+    repeat(4, uint8()),
+    uint32(),
+    uint32(),
+  ] as const),
   ([
     name,
     attr,
@@ -395,19 +293,8 @@ const recordListParser: Parser<Record[]> = varLen(
   )
 );
 
-export function palmDDCHeaderParser(records: Record[]): Parser<PalmDDCHeader> {
-  const record = records[0];
-  const subParsers: [
-    Parser<undefined>,
-    Parser<number>,
-    Parser<undefined>,
-    Parser<number>,
-    Parser<number>,
-    Parser<number>,
-    Parser<number>,
-    Parser<undefined>
-  ] = [
-    moveTo(record.offset),
+export const palmDDCHeaderParser: Parser<PalmDDCHeader> = map(
+  sequence([
     uint16(),
     skip("Uint8", 2),
     uint32(),
@@ -415,133 +302,165 @@ export function palmDDCHeaderParser(records: Record[]): Parser<PalmDDCHeader> {
     uint16(),
     uint16(),
     skip("Uint8", 2),
-  ];
-
-  return map(
-    sequence(subParsers),
-    ([
-      _,
+  ] as const),
+  ([
+    compression,
+    _skip1,
+    textLength,
+    recordCount,
+    recordSize,
+    encryptionType,
+    _skip2,
+  ]) => {
+    return {
       compression,
-      _skip1,
       textLength,
       recordCount,
       recordSize,
       encryptionType,
-      _skip2,
-    ]) => {
-      return {
-        compression,
-        textLength,
-        recordCount,
-        recordSize,
-        encryptionType,
-      };
-    }
-  );
-}
+    };
+  }
+);
 
-export const mobiHeaderSliceParser: [
-  Parser<number>,
-  Parser<number>,
-  Parser<number>,
-  Parser<number>
-] = [uint32(), uint32(), uint32(), uint32()];
+export const mobiHeaderParser: Parser<MobiHeader> = map(
+  sequence([
+    uint32(),
+    slice(
+      "Uint32",
+      sequence([
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        skip("Uint8", 40),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        skip("Uint8", 36),
+        uint32(),
+        uint32(),
+        uint32(),
+        uint32(),
+        skip("Uint8", 8),
+        skip("Uint8", 8),
+        skip("Uint8", 46),
+        uint16(),
+      ] as const)
+    ),
+  ] as const),
+  ([
+    identifier,
+    [
+      headerLength,
+      [
+        [
+          mobiType,
+          textEncoding,
+          uniqueId,
+          generatorVersion,
+          _skip1,
+          firstNonbookIndex,
+          fullNameOffset,
+          fullNameLength,
+          language,
+          inputLanguage,
+          outputLanguage,
+          formatVersion,
+          firstImageIdx,
+          huffRecIndex,
+          huffRecCount,
+          datpRecIndex,
+          datpRecCount,
+          exthFlags,
+          _skip2,
+          drmOffset,
+          drmCount,
+          drmSize,
+          drmFlags,
+          _skip3,
+          _skip4,
+          _skip5,
+          extraFlags,
+        ],
+        undefined,
+      ],
+    ],
+  ]) => {
+    return {
+      identifier,
+      headerLength,
+      mobiType,
+      textEncoding,
+      uniqueId,
+      generatorVersion,
+      firstNonbookIndex,
+      fullNameOffset,
+      fullNameLength,
+      language,
+      inputLanguage,
+      outputLanguage,
+      formatVersion,
+      firstImageIdx,
+      huffRecIndex,
+      huffRecCount,
+      datpRecIndex,
+      datpRecCount,
+      extraFlags,
+      drmOffset,
+      drmCount,
+      drmSize,
+      drmFlags,
+      exthFlags,
+    };
+  }
+);
 
-export const mobiHeaderSubParsers: [Parser<number>, Parser<[number, any]>] = [
-  uint32(),
-  pipe(uint32(), slice(sequence(mobiHeaderSliceParser))),
-];
+export const mobiMetadataParser: Parser<MobiMetadata> = map(
+  sequence([
+    pdbHeaderParser,
+    pipe(recordListParser, (records) => {
+      const record = records[0];
+      return sequence([moveTo(record.offset), palmDDCHeaderParser] as const);
+    }),
+    mobiHeaderParser,
+  ] as const),
+  ([pdbHeader, [recordList, [_skip, palmDDCHeader]], mobiHeader]) => {
+    return {
+      pdbHeader,
+      recordList,
+      palmDDCHeader,
+      mobiHeader,
+    };
+  }
+);
 
-export const mobiHeaderParser = map(sequence(mobiHeaderSubParsers), () => {
-  return {};
+export const mobiParser = pipe(mobiMetadataParser, (metadata) => {
+  return (stream: Stream) => {
+    const text = readText(stream, metadata);
+
+    return ok(text);
+  };
 });
 
-/*
-  const startOffset = stream.offset;
-
-  const identifier = stream.readUint32();
-  const headerLength = stream.readUint32();
-  const mobiType = stream.readUint32();
-  const textEncoding = stream.readUint32();
-  const uniqueId = stream.readUint32();
-  const generatorVersion = stream.readUint32();
-
-  stream.forward(40);
-
-  const firstNonbookIndex = stream.readUint32();
-  const fullNameOffset = stream.readUint32();
-  const fullNameLength = stream.readUint32();
-
-  const language = stream.readUint32();
-  const inputLanguage = stream.readUint32();
-  const outputLanguage = stream.readUint32();
-  const formatVersion = stream.readUint32();
-  const firstImageIdx = stream.readUint32();
-
-  const huffRecIndex = stream.readUint32();
-  const huffRecCount = stream.readUint32();
-  const datpRecIndex = stream.readUint32();
-  const datpRecCount = stream.readUint32();
-
-  const exthFlags = stream.readUint32();
-
-  stream.forward(36);
-
-  const drmOffset = stream.readUint32();
-  const drmCount = stream.readUint32();
-  const drmSize = stream.readUint32();
-  const drmFlags = stream.readUint32();
-
-  stream.forward(8);
-
-  stream.forward(4);
-
-  stream.forward(46);
-
-  const extraFlags = stream.readUint16();
-
-  stream.moveTo(startOffset + headerLength);
-
-  return {
-    identifier,
-    headerLength,
-    mobiType,
-    textEncoding,
-    uniqueId,
-    generatorVersion,
-    firstNonbookIndex,
-    fullNameOffset,
-    fullNameLength,
-    language,
-    inputLanguage,
-    outputLanguage,
-    formatVersion,
-    firstImageIdx,
-    huffRecIndex,
-    huffRecCount,
-    datpRecIndex,
-    datpRecCount,
-    exthFlags,
-    drmOffset,
-    drmCount,
-    drmSize,
-    drmFlags,
-    extraFlags,
-  };*/
-
-const mobiSubParsers: [
-  Parser<PDBHeader>,
-  Parser<[Record[], PalmDDCHeader]>,
-  Parser<MobiHeader>
-] = [
-  pdbHeaderParser,
-  pipe(recordListParser, palmDDCHeaderParser),
-  mobiHeaderParser,
-];
-
-export const mobiParser = sequence(mobiSubParsers);
-
-export function parse(buffer: ArrayBuffer) {
+export function parse(buffer: ArrayBuffer): Result<Error, Mobi> {
   const stream = new Stream(buffer);
-  const pdbHeader = match(stream, mobiParser);
+  const result = match(stream, mobiParser);
+  if (isOk(result)) {
+    const [metadata, text] = result.value;
+    const mobi: Mobi = { metadata, text };
+
+    return ok(mobi);
+  } else {
+    return mapErr(result);
+  }
 }

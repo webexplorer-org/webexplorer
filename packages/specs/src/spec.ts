@@ -1,38 +1,5 @@
 import { DataType, Stream } from "./stream";
-
-export interface Ok<T> {
-  kind: "ok";
-  value: T;
-}
-
-export interface Err<E> {
-  kind: "error";
-  value: E;
-}
-
-type Result<E, T> = Ok<T> | Err<E>;
-
-export function ok<T>(value: T): Ok<T> {
-  return {
-    kind: "ok",
-    value,
-  };
-}
-
-export function isOk<E, T>(result: Result<E, T>): result is Ok<T> {
-  return result.kind === "ok";
-}
-
-export function error<E>(value: E): Err<E> {
-  return {
-    kind: "error",
-    value,
-  };
-}
-
-export function isErr<E, T>(result: Result<E, T>): result is Err<E> {
-  return result.kind === "error";
-}
+import { Result, ok, error, isOk, isErr, mapErr } from "@webexplorer/common";
 
 export type Parser<T> = (stream: Stream) => Result<Error, T>;
 
@@ -123,15 +90,13 @@ export function varLen<T>(
         if (isOk(valueResult)) {
           values.push(valueResult.value);
         } else {
-          const err: Result<Error, T[]> = error(valueResult.value);
-          return err;
+          return mapErr(valueResult);
         }
       }
 
       return ok(values);
     } else {
-      const err: Result<Error, T[]> = error(lengthResult.value);
-      return err;
+      return mapErr(lengthResult);
     }
   };
 }
@@ -147,8 +112,7 @@ export function map<U, T>(
       const mapped = mapper(value);
       return ok(mapped);
     } else {
-      const err: Result<Error, T> = error(valueResult.value);
-      return err;
+      return mapErr(valueResult);
     }
   };
 }
@@ -166,12 +130,10 @@ export function pipe<U, T>(
         const result: [U, T] = [valueResult.value, pipedResult.value];
         return ok(result);
       } else {
-        const err: Result<Error, [U, T]> = error(pipedResult.value);
-        return err;
+        return mapErr(pipedResult);
       }
     } else {
-      const err: Result<Error, [U, T]> = error(valueResult.value);
-      return err;
+      return mapErr(valueResult);
     }
   };
 }
@@ -185,8 +147,7 @@ export function repeat<T>(count: number, parser: Parser<T>): Parser<T[]> {
       if (isOk(result)) {
         values.push(result.value);
       } else {
-        const err: Result<Error, T> = error(result.value);
-        return err;
+        return mapErr(result);
       }
     }
 
@@ -194,47 +155,53 @@ export function repeat<T>(count: number, parser: Parser<T>): Parser<T[]> {
   };
 }
 
-export type SequenceParserResult<U extends any[]> = U extends []
-  ? []
-  : U extends [Parser<infer T>]
-  ? [T]
-  : U extends [Parser<infer T>, ...infer Rest]
-  ? [T, ...SequenceParserResult<Rest>]
-  : [];
+export type SequenceParserResult<U extends readonly Parser<any>[]> =
+  U extends readonly []
+    ? []
+    : U extends readonly [Parser<infer T>, ...infer Rest]
+    ? Rest extends readonly Parser<any>[]
+      ? [T, ...SequenceParserResult<Rest>]
+      : never
+    : never;
 
-export function sequence<U extends Array<Parser<any>>>(
+export function sequence<U extends readonly Parser<any>[]>(
   parsers: U
 ): Parser<SequenceParserResult<U>> {
   return (stream: Stream): Result<Error, SequenceParserResult<U>> => {
-    const values = [] as SequenceParserResult<U>;
+    const values = [];
 
     for (const parser of parsers) {
       const value = parser(stream);
       if (isOk(value)) {
-        // @ts-ignore
-        values.push(value);
+        values.push(value.value);
       } else {
         return value;
       }
     }
 
-    return ok(values);
+    return ok(values as SequenceParserResult<U>);
   };
 }
 
 export function slice<T>(
+  dataType: DataType,
   parser: Parser<T>
-): (len: number) => Parser<[T, undefined]> {
-  return (len: number) => {
-    return (stream: Stream) => {
-      const offset = stream.offset;
+): Parser<readonly [number, [T, undefined]]> {
+  return (stream: Stream) => {
+    const offset = stream.offset;
 
-      const subParsers: [Parser<T>, Parser<undefined>] = [
-        parser,
-        moveTo(offset + len),
-      ];
-      return sequence(subParsers)(stream);
-    };
+    const lenResult = any(dataType)(stream);
+    if (isOk(lenResult)) {
+      const len = lenResult.value;
+      const result = sequence([parser, moveTo(offset + len)] as const)(stream);
+      if (isOk(result)) {
+        return ok([len, result.value] as const);
+      } else {
+        return mapErr(result);
+      }
+    } else {
+      return mapErr(lenResult);
+    }
   };
 }
 
@@ -242,6 +209,6 @@ export function match<T>(stream: Stream, parser: Parser<T>) {
   try {
     return parser(stream);
   } catch (e) {
-    return error(e);
+    return error(e) as Result<Error, T>;
   }
 }

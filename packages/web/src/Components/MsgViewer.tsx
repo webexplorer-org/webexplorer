@@ -19,7 +19,7 @@ export function MsgViewer(props: MsgViewerProps) {
     }
 
     parseMsg();
-  }, [setDoc]);
+  }, [setDoc, file]);
 
   if (!doc) {
     return null;

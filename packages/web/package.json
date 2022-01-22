@@ -19,6 +19,7 @@
     "@types/react-dom": "^16.9.14",
     "@types/three": "^0.135.0",
     "@webexplorer/archive": "^0.1.0",
+    "@webexplorer/common": "^0.1.0",
     "@webexplorer/epub": "^0.1.0",
     "@webexplorer/gtp": "^0.1.0",
     "@webexplorer/mobi": "^0.1.0",
