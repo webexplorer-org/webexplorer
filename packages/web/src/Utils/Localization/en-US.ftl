@@ -12,3 +12,4 @@ azw3-file = Azw3 File
 archive-file = Archive File
 guitar-tab-file = GuitarPro File
 threed-model-file = 3D Model File
+loading-failure = Loading Failure

@@ -3,6 +3,7 @@ import { mimeType } from "../Utils/file";
 import "./FileViewer.css";
 import GtpViewer from "./GtpViewer";
 import { Loading } from "./Loading";
+import { useDocumentTitle } from "./DocumentTitle";
 
 const PdfViewer = React.lazy(() => import("./PdfViewer"));
 const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
@@ -11,18 +12,14 @@ const EPubViewer = React.lazy(() => import("./EPubViewer"));
 const MobiViewer = React.lazy(() => import("./MobiViewer"));
 
 export interface FileViewerProps {
-  file: File | null;
+  file: File;
 }
 
 export function FileViewer(props: FileViewerProps) {
   const { file } = props;
-
-  if (!file) {
-    return null;
-  }
+  let viewer = null;
 
   const fileType = mimeType(file);
-  let viewer = null;
   switch (fileType) {
     case "application/pdf":
       viewer = <PdfViewer file={file} />;
@@ -63,6 +60,8 @@ export function FileViewer(props: FileViewerProps) {
         </div>
       );
   }
+
+  useDocumentTitle({ title: file.name });
 
   return (
     <div className="file__viewer">

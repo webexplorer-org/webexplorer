@@ -4,7 +4,8 @@ import "./PdfViewer.css";
 import * as pdfjs from "pdfjs-dist";
 // @ts-ignore
 import pdfjsWorder from "pdfjs-dist/build/pdf.worker.entry";
-import { Loading } from "./Loading";
+import { State, Stateful } from "./Stateful";
+import { Dialog } from "./Dialog";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import { useElementSize } from "../Hooks/useElementSize";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorder;
@@ -15,48 +16,64 @@ export interface PdfViewerProps {
   file: File;
 }
 
+type PasswordCallback = (password: string) => void;
+
 export function PdfViewer(props: PdfViewerProps) {
   const { file } = props;
-  const [doc, setDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
+  const [loadingState, setLoadingState] = useState(State.Initial);
   const [pages, setPages] = useState<pdfjs.PDFPageProxy[]>([]);
   const [viewports, setViewports] = useState<
     { viewport: PageViewport; scrollY: number; scale: number }[]
   >([]);
   const [containerRef, size] = useElementSize();
+  const [passwordDialogIsVisible, setPasswordDialogIsVisible] = useState(false);
+  const passwordCallbackRef = useRef<PasswordCallback | null>(null);
 
   useEffect(() => {
     let aborted = false;
     let url: string | null = null;
     async function load() {
-      url = URL.createObjectURL(file);
-      const loadingTask = await pdfjs.getDocument({
-        url,
-      });
-      if (aborted) {
-        return;
-      }
-
-      const doc = await loadingTask.promise;
-      if (aborted) {
-        return;
-      }
-
-      setDoc(doc);
-
-      const pages: pdfjs.PDFPageProxy[] = [];
-      for (let i = 0; i < doc.numPages - 1; i++) {
-        const page = await doc.getPage(i + 1);
+      try {
+        setLoadingState(State.Loading);
+        url = URL.createObjectURL(file);
+        const loadingTask = await pdfjs.getDocument({
+          url,
+        });
         if (aborted) {
-          break;
+          return;
         }
-        pages.push(page);
-      }
 
-      if (aborted) {
-        return;
-      }
+        loadingTask.onPassword = (
+          callback: (password: string) => void,
+          reason: string
+        ) => {
+          passwordCallbackRef.current = callback;
+          setPasswordDialogIsVisible(true);
+        };
 
-      setPages(pages);
+        const doc = await loadingTask.promise;
+        if (aborted) {
+          return;
+        }
+
+        const pages: pdfjs.PDFPageProxy[] = [];
+        for (let i = 0; i < doc.numPages - 1; i++) {
+          const page = await doc.getPage(i + 1);
+          if (aborted) {
+            break;
+          }
+          pages.push(page);
+        }
+
+        if (aborted) {
+          return;
+        }
+
+        setPages(pages);
+        setLoadingState(State.Success);
+      } catch (e) {
+        setLoadingState(State.Failure);
+      }
     }
 
     load();
@@ -68,7 +85,7 @@ export function PdfViewer(props: PdfViewerProps) {
         url = null;
       }
     };
-  }, [file, setDoc, setPages]);
+  }, [file, setPages, setLoadingState, setPasswordDialogIsVisible]);
 
   useEffect(() => {
     const pageGap = 4;
@@ -101,44 +118,44 @@ export function PdfViewer(props: PdfViewerProps) {
     };
   }, [setScrollY]);
 
-  if (!doc) {
-    return <Loading />;
-  }
-
   const windowHeight = window.innerHeight;
   const visibleRangeTop = scrollY - windowHeight;
   const visibleRangeBottom = scrollY + windowHeight * 2;
 
   return (
     <div className="pdf__viewer">
-      <div className="pdf__viewer__pages" ref={containerRef}>
-        {pages.map((page, index) => {
-          const viewport = viewports[index];
-          let isVisible = false;
-          let scale = 1.0;
-          if (viewport) {
-            scale = viewport.scale;
-            const viewportTop = viewport.scrollY;
-            const viewportBottom =
-              viewport.scrollY + viewport.viewport.height * scale;
-            isVisible = !(
-              viewportTop > visibleRangeBottom ||
-              viewportBottom < visibleRangeTop
-            );
-          }
+      <Stateful state={loadingState}>
+        <div className="pdf__viewer__pages" ref={containerRef}>
+          {pages.map((page, index) => {
+            const viewport = viewports[index];
+            let isVisible = false;
+            let scale = 1.0;
+            if (viewport) {
+              scale = viewport.scale;
+              const viewportTop = viewport.scrollY;
+              const viewportBottom =
+                viewport.scrollY + viewport.viewport.height * scale;
+              isVisible = !(
+                viewportTop > visibleRangeBottom ||
+                viewportBottom < visibleRangeTop
+              );
+            }
 
-          return (
-            <PdfPage
-              isVisible={isVisible}
-              key={index}
-              scale={scale}
-              viewport={viewport?.viewport}
-              page={page}
-            ></PdfPage>
-          );
-        })}
-      </div>
-      <footer className="=pdf__viewer__controls"></footer>
+            return (
+              <PdfPage
+                isVisible={isVisible}
+                key={index}
+                scale={scale}
+                viewport={viewport?.viewport}
+                page={page}
+              ></PdfPage>
+            );
+          })}
+        </div>
+      </Stateful>
+      <Dialog isVisible={passwordDialogIsVisible}>
+        <div>Password</div>
+      </Dialog>
     </div>
   );
 }

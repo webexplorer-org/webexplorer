@@ -12,3 +12,4 @@ azw3-file = Azw3文件
 archive-file = 压缩文件
 guitar-tab-file = Guitar Tab文件
 threed-model-file = 3D模型文件
+loading-failure = 加载失败
