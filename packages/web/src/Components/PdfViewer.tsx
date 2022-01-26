@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import "./PdfViewer.css";
+import { Localized } from "@fluent/react";
 
 import * as pdfjs from "pdfjs-dist";
 // @ts-ignore
 import pdfjsWorder from "pdfjs-dist/build/pdf.worker.entry";
 import { State, Stateful } from "./Stateful";
-import { Dialog } from "./Dialog";
+import { Dialog, DialogHeader, DialogMain } from "./Dialog";
 import { PageViewport } from "pdfjs-dist/types/web/interfaces";
 import { useElementSize } from "../Hooks/useElementSize";
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorder;
@@ -26,8 +27,10 @@ export function PdfViewer(props: PdfViewerProps) {
     { viewport: PageViewport; scrollY: number; scale: number }[]
   >([]);
   const [containerRef, size] = useElementSize();
+
   const [passwordDialogIsVisible, setPasswordDialogIsVisible] = useState(false);
   const passwordCallbackRef = useRef<PasswordCallback | null>(null);
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
     let aborted = false;
@@ -153,8 +156,56 @@ export function PdfViewer(props: PdfViewerProps) {
           })}
         </div>
       </Stateful>
-      <Dialog isVisible={passwordDialogIsVisible}>
-        <div>Password</div>
+      <Dialog
+        aria-labelledby="password-dialog-title"
+        isVisible={passwordDialogIsVisible}
+      >
+        <DialogHeader>
+          <Localized id="password-dialog-title">
+            <h4 className="dialog__header__title" id="password-dialog-title">
+              Password
+            </h4>
+          </Localized>
+        </DialogHeader>
+        <DialogMain>
+          <form
+            className="form--password"
+            onSubmit={(evt) => {
+              evt.preventDefault();
+              setPasswordDialogIsVisible(false);
+
+              setTimeout(() => {
+                if (passwordCallbackRef.current) {
+                  passwordCallbackRef.current(password);
+                }
+              });
+            }}
+          >
+            <div className="form__field">
+              <Localized id="password-label">
+                <label className="form__field__label" htmlFor="password-input">
+                  Password
+                </label>
+              </Localized>
+              <Localized id="password-input" attrs={{ placeholder: true }}>
+                <input
+                  className="form__field__input"
+                  type="password"
+                  placeholder="Input password"
+                  value={password}
+                  onChange={(evt) => {
+                    setPassword(evt.target.value);
+                  }}
+                />
+              </Localized>
+            </div>
+            <div className="form__submit">
+              <button className="form__field__button">
+                <Localized id="submit">Submit</Localized>
+              </button>
+            </div>
+          </form>
+        </DialogMain>
       </Dialog>
     </div>
   );

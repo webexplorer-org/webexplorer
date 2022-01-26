@@ -13,3 +13,35 @@
   margin: 2px 0;
   border: 1px solid #ccc;
 }
+
+.form--password {
+  max-width: 100%;
+  width: 20rem;
+}
+
+.form__field {
+  margin: 0 0 1rem 0;
+}
+
+.form--password label,
+.form--password input,
+.form--password button {
+  width: 100%;
+}
+
+.form__field__label {
+  display: inline-block;
+  padding: 0.5rem;
+}
+
+.form__field__input {
+  padding: 0.5rem;
+}
+
+.form__field__button {
+  padding: 0.5rem;
+}
+
+.form__submit {
+  margin: 2rem 0 0 0;
+}
