@@ -1,4 +1,5 @@
 import "./Loading.css";
+import { Localized } from "@fluent/react";
 
 export function Loading() {
   return (
@@ -17,6 +18,9 @@ export function Loading() {
         <div></div>
         <div></div>
       </div>
+      <Localized id="loading">
+        <label>Loading</label>
+      </Localized>
     </div>
   );
 }

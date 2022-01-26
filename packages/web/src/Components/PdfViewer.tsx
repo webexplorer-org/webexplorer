@@ -37,6 +37,7 @@ export function PdfViewer(props: PdfViewerProps) {
     let url: string | null = null;
     async function load() {
       try {
+        setPasswordDialogIsVisible(false);
         setLoadingState(State.Loading);
         url = URL.createObjectURL(file);
         const loadingTask = await pdfjs.getDocument({
@@ -129,31 +130,32 @@ export function PdfViewer(props: PdfViewerProps) {
     <div className="pdf__viewer">
       <Stateful state={loadingState}>
         <div className="pdf__viewer__pages" ref={containerRef}>
-          {pages.map((page, index) => {
-            const viewport = viewports[index];
-            let isVisible = false;
-            let scale = 1.0;
-            if (viewport) {
-              scale = viewport.scale;
+          {pages
+            .filter((page, index) => {
+              const viewport = viewports[index];
+              return !!viewport;
+            })
+            .map((page, index) => {
+              const viewport = viewports[index];
+              const scale = viewport.scale;
               const viewportTop = viewport.scrollY;
               const viewportBottom =
                 viewport.scrollY + viewport.viewport.height * scale;
-              isVisible = !(
+              const isVisible = !(
                 viewportTop > visibleRangeBottom ||
                 viewportBottom < visibleRangeTop
               );
-            }
 
-            return (
-              <PdfPage
-                isVisible={isVisible}
-                key={index}
-                scale={scale}
-                viewport={viewport?.viewport}
-                page={page}
-              ></PdfPage>
-            );
-          })}
+              return (
+                <PdfPage
+                  isVisible={isVisible}
+                  key={index}
+                  scale={scale}
+                  viewport={viewport?.viewport}
+                  page={page}
+                ></PdfPage>
+              );
+            })}
         </div>
       </Stateful>
       <Dialog
@@ -214,7 +216,7 @@ export function PdfViewer(props: PdfViewerProps) {
 export interface PdfPageProps {
   isVisible: boolean;
   page: pdfjs.PDFPageProxy;
-  viewport: PageViewport | undefined;
+  viewport: PageViewport;
   scale: number;
 }
 
@@ -264,10 +266,6 @@ export function PdfPage(props: PdfPageProps) {
       }
     };
   }, [isVisible, page, scale, viewport]);
-
-  if (!viewport) {
-    return null;
-  }
 
   const width = Math.floor(viewport.width * scale * dpr);
   const height = Math.floor(viewport.height * scale * dpr);
