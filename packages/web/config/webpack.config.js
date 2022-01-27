@@ -322,6 +322,7 @@ module.exports = function (webpackEnv) {
         path: false,
         fs: false,
         crypto: false,
+        buffer: require.resolve("buffer/")
       },
       plugins: [
         // Prevents users from importing files from outside of src/ (or node_modules/).

@@ -125,6 +125,14 @@ export class Stream {
     return u32;
   }
 
+  isEnd() {
+    return this.offset === this.view.byteLength;
+  }
+
+  peek() {
+    return this.view.getUint8(this.offset);
+  }
+
   forward(len: number) {
     this.offset = this.offset + len;
   }

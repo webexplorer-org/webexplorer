@@ -10,6 +10,7 @@ const ArchiveViewer = React.lazy(() => import("./ArchiveViewer"));
 const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
 const EPubViewer = React.lazy(() => import("./EPubViewer"));
 const MobiViewer = React.lazy(() => import("./MobiViewer"));
+const TorrentViewer = React.lazy(() => import("./TorrentViewer"));
 
 export interface FileViewerProps {
   file: File;
@@ -52,6 +53,9 @@ export function FileViewer(props: FileViewerProps) {
       break;
     case "application/x-gtp":
       viewer = <GtpViewer file={file} />;
+      break;
+    case "application/x-bittorrent":
+      viewer = <TorrentViewer file={file} />;
       break;
     default:
       viewer = (

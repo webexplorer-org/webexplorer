@@ -1,0 +1,7 @@
+.torrent__viewer {
+  padding: 1rem;
+}
+
+.torrent__viewer p {
+  white-space: pre-wrap;
+}
