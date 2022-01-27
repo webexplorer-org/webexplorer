@@ -19,3 +19,6 @@ password-label = Password
 password-input =
   .placeholder = Input password
 submit = Submit
+torrent-file = Torrent File
+download-files = Download Files
+include-n-files = Include { $count } files

@@ -133,6 +133,12 @@ export function DropZone(props: DropZoneProps) {
               </td>
               <td>.gltf .stl .3mf .obj</td>
             </tr>
+            <tr>
+              <td>
+                <Localized id="torrent-file">Torrent File</Localized>
+              </td>
+              <td>.torrent</td>
+            </tr>
           </tbody>
         </table>
       </div>

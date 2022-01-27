@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import "./TorrentViewer.css";
 import { State, Stateful } from "./Stateful";
-import WebTorrent from "webtorrent/webtorrent.min";
+import { decode } from "@webexplorer/torrent";
+import WebTorrent, { Torrent } from "webtorrent/webtorrent.min";
 import { Buffer } from "buffer";
+import { Stream } from "@webexplorer/common";
+import { Localized } from "@fluent/react";
 
 export interface TorrentViewerProps {
   file: File;
@@ -11,31 +14,20 @@ export interface TorrentViewerProps {
 export function TorrentViewer(props: TorrentViewerProps) {
   const { file } = props;
   const [torrent, setTorrent] = useState<any>(null);
-  const [files, setFiles] = useState<Array<{ name: string; url: string }>>([]);
+  const [result, setResult] = useState<ArrayBuffer | null>(null);
   const [state, setState] = useState(State.Initial);
-  const [client] = useState(() => {
-    return new WebTorrent();
-  });
 
   useEffect(() => {
     function load() {
-      setState(State.Initial);
+      setState(State.Loading);
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as ArrayBuffer;
-        const buffer = Buffer.from(result);
-
-        client.add(buffer, (torrent: any) => {
-          torrent.files.forEach((file: any) => {
-            file.getBlobURL((err: Error, url: string) => {
-              setFiles((files) => {
-                return [...files, { name: file.name, url }];
-              });
-            });
-          });
-          setTorrent(torrent);
-          setState(State.Success);
-        });
+        const stream = new Stream(result);
+        const torrent = decode(stream);
+        setTorrent(torrent);
+        setResult(result);
+        setState(State.Success);
       };
 
       reader.onerror = () => {
@@ -46,24 +38,50 @@ export function TorrentViewer(props: TorrentViewerProps) {
     }
 
     load();
-  }, [client, file, setFiles, setTorrent]);
+  }, [file, setResult, setTorrent]);
+
+  const filesElemRef = useRef<HTMLDivElement>(null);
+  const [client] = useState(() => {
+    return new WebTorrent();
+  });
+  const download = useCallback(() => {
+    if (!result) {
+      return;
+    }
+
+    const buffer = Buffer.from(result);
+
+    client.add(buffer, (torrent: Torrent) => {
+      torrent.files.forEach((file) => {
+        if (filesElemRef.current) {
+          file.appendTo(filesElemRef.current);
+        }
+      });
+    });
+
+    client.on("error", (err) => {
+      console.log(err);
+    });
+  }, [client, result]);
 
   return (
     <Stateful state={state}>
       <div className="torrent__viewer">
-        <p>
-          <span>Magnet Link: </span>
-          <span>{torrent?.magnetURI}</span>
+        <p className="info">
+          <span>{torrent?.info.name}</span>
         </p>
-        <ol>
-          {files.map((file, index) => {
-            return (
-              <li key={index}>
-                <a href={file.url}>{file.name}</a>
-              </li>
-            );
-          })}
-        </ol>
+        <Localized
+          id="include-n-files"
+          vars={{ count: torrent?.info.files.length }}
+        >
+          <p className="info">
+            <span>Include {torrent?.info.files.length} files</span>
+          </p>
+        </Localized>
+        <div className="files" ref={filesElemRef}></div>
+        <Localized id="download-files">
+          <button onClick={download}>Download</button>
+        </Localized>
       </div>
     </Stateful>
   );

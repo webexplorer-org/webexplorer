@@ -19,3 +19,6 @@ password-label = 密码
 password-input =
   .placeholder = 输入密码
 submit = 提交
+torrent-file = Torrent文件
+download-files = 下载文件
+include-n-files = 包含{ $count }个文件

@@ -2,6 +2,11 @@
   padding: 1rem;
 }
 
-.torrent__viewer p {
+.torrent__viewer .info {
   white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.torrent__viewer .files * {
+  width: 100%;
 }
