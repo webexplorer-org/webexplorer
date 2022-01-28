@@ -12,10 +12,20 @@ import {
 import { negotiateLanguages } from "@fluent/langneg";
 import Cookie from "js-cookie";
 import { PreferencesContext } from "./Contexts/Preferences";
+import { Channel } from "./Utils/channel";
 
 const localeCookieName = "Locale";
 
-function App() {
+export type AppEvent = {
+  key: "upgrade";
+};
+
+export type AppProps = {
+  channel: Channel<AppEvent>;
+};
+
+function App(props: AppProps) {
+  const { channel } = props;
   const [locale, setLocale] = useState(() => {
     const locale = Cookie.get(localeCookieName) as Locale;
     if (locale) {
@@ -46,6 +56,16 @@ function App() {
     },
     [setLocale]
   );
+
+  useEffect(() => {
+    const unsubscription = channel.subscribe((evt) => {
+      switch (evt.key) {
+        case "upgrade":
+      }
+    });
+
+    return unsubscription;
+  }, [channel]);
 
   return (
     <PreferencesContext.Provider value={{ locale, locales, updateLocale }}>

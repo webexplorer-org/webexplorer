@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import "./TorrentViewer.css";
 import { State, Stateful } from "./Stateful";
-import { decode } from "@webexplorer/torrent";
-import WebTorrent, { Torrent } from "webtorrent/webtorrent.min";
+import WebTorrent, { Torrent, TorrentFile } from "webtorrent/webtorrent.min";
 import { Buffer } from "buffer";
-import { Stream } from "@webexplorer/common";
 import { Localized } from "@fluent/react";
 
 export interface TorrentViewerProps {
@@ -13,24 +11,33 @@ export interface TorrentViewerProps {
 
 export function TorrentViewer(props: TorrentViewerProps) {
   const { file } = props;
-  const [torrent, setTorrent] = useState<any>(null);
-  const [result, setResult] = useState<ArrayBuffer | null>(null);
+  const [torrent, setTorrent] = useState<Torrent | null>(null);
   const [state, setState] = useState(State.Initial);
+  const [client] = useState(() => {
+    return new WebTorrent();
+  });
 
   useEffect(() => {
     function load() {
       setState(State.Loading);
+
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as ArrayBuffer;
-        const stream = new Stream(result);
-        const torrent = decode(stream);
-        setTorrent(torrent);
-        setResult(result);
-        setState(State.Success);
+
+        const buffer = Buffer.from(result);
+
+        client.add(buffer, (torrent: Torrent) => {
+          setTorrent(torrent);
+          setState(State.Success);
+        });
+
+        client.on("error", (err) => {
+          setState(State.Failure);
+        });
       };
 
-      reader.onerror = () => {
+      reader.onerror = (err) => {
         setState(State.Failure);
       };
 
@@ -38,52 +45,55 @@ export function TorrentViewer(props: TorrentViewerProps) {
     }
 
     load();
-  }, [file, setResult, setTorrent]);
-
-  const filesElemRef = useRef<HTMLDivElement>(null);
-  const [client] = useState(() => {
-    return new WebTorrent();
-  });
-  const download = useCallback(() => {
-    if (!result) {
-      return;
-    }
-
-    const buffer = Buffer.from(result);
-
-    client.add(buffer, (torrent: Torrent) => {
-      torrent.files.forEach((file) => {
-        if (filesElemRef.current) {
-          file.appendTo(filesElemRef.current);
-        }
-      });
-    });
-
-    client.on("error", (err) => {
-      console.log(err);
-    });
-  }, [client, result]);
+  }, [client, file, setTorrent]);
 
   return (
     <Stateful state={state}>
       <div className="torrent__viewer">
-        <p className="info">
-          <span>{torrent?.info.name}</span>
-        </p>
-        <Localized
-          id="include-n-files"
-          vars={{ count: torrent?.info.files.length }}
-        >
-          <p className="info">
-            <span>Include {torrent?.info.files.length} files</span>
-          </p>
-        </Localized>
-        <div className="files" ref={filesElemRef}></div>
-        <Localized id="download-files">
-          <button onClick={download}>Download</button>
-        </Localized>
+        {torrent?.files.map((file, index) => {
+          return <TorrentFileItem file={file} key={index}></TorrentFileItem>;
+        })}
       </div>
     </Stateful>
+  );
+}
+
+export function TorrentFileItem({ file }: { file: TorrentFile }) {
+  const previewerElemRef = useRef<HTMLDivElement>(null);
+
+  const preview = useCallback(() => {
+    if (previewerElemRef.current) {
+      file.appendTo(previewerElemRef.current);
+    }
+  }, [file]);
+
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    file.getBlobURL((err, url) => {
+      if (url) {
+        setUrl(url);
+      }
+    });
+  }, [file, setUrl]);
+
+  return (
+    <div className="torrent__file">
+      <header>
+        <p>{file.name}</p>
+        <Localized id="preview">
+          <button onClick={preview} type="button">
+            Preview
+          </button>
+        </Localized>
+        <Localized id="download">
+          <a rel="noreferrer" target="_blank" href={url}>
+            Download
+          </a>
+        </Localized>
+      </header>
+      <div className="previewer" ref={previewerElemRef}></div>
+    </div>
   );
 }
 

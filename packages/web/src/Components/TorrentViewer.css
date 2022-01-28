@@ -2,11 +2,20 @@
   padding: 1rem;
 }
 
-.torrent__viewer .info {
-  white-space: pre-wrap;
-  word-break: break-all;
+.torrent__file header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.torrent__viewer .files * {
+.torrent__file header p {
+  flex: 1;
+}
+
+.torrent__file header button {
+  margin-right: 1rem;
+}
+
+.torrent__file .previewer * {
   width: 100%;
 }

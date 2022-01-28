@@ -180,7 +180,7 @@ export function PdfViewer(props: PdfViewerProps) {
                 if (passwordCallbackRef.current) {
                   passwordCallbackRef.current(password);
                 }
-              });
+              }, 100);
             }}
           >
             <div className="form__field">
