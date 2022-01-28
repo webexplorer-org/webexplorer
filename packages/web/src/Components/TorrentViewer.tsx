@@ -61,11 +61,13 @@ export function TorrentViewer(props: TorrentViewerProps) {
 export function TorrentFileItem({ file }: { file: TorrentFile }) {
   const previewerElemRef = useRef<HTMLDivElement>(null);
 
+  const [isPreview, setIsPreview] = useState(false);
   const preview = useCallback(() => {
     if (previewerElemRef.current) {
       file.appendTo(previewerElemRef.current);
+      setIsPreview(true);
     }
-  }, [file]);
+  }, [file, setIsPreview]);
 
   const [url, setUrl] = useState("");
 
@@ -82,7 +84,7 @@ export function TorrentFileItem({ file }: { file: TorrentFile }) {
       <header>
         <p>{file.name}</p>
         <Localized id="preview">
-          <button onClick={preview} type="button">
+          <button disabled={isPreview} onClick={preview} type="button">
             Preview
           </button>
         </Localized>
