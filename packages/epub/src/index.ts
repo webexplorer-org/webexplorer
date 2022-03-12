@@ -87,36 +87,17 @@ export function parseMetadata(xml: XMLDocument): EPubMetadata {
   }
 
   const titleNodes = metadataNode.getElementsByTagName("dc:title");
-  if (titleNodes.length !== 1) {
-    throw new Error("no title in metadata");
-  }
-
   const creatorNodes = metadataNode.getElementsByTagName("dc:creator");
-  if (creatorNodes.length !== 1) {
-    throw new Error("no creator in metadata");
-  }
-
   const identifierNodes = metadataNode.getElementsByTagName("dc:identifier");
-  if (identifierNodes.length !== 1) {
-    throw new Error("no identifier in metadata");
-  }
-
   const languageNodes = metadataNode.getElementsByTagName("dc:language");
-  if (languageNodes.length !== 1) {
-    throw new Error("no language in metadata");
-  }
-
   const publisherNodes = metadataNode.getElementsByTagName("dc:publisher");
-  if (publisherNodes.length !== 1) {
-    throw new Error("no publisher in metadata");
-  }
 
   return {
-    title: titleNodes[0].textContent || "",
-    creator: creatorNodes[0].textContent || "",
-    language: languageNodes[0].textContent || "",
-    publisher: publisherNodes[0].textContent || "",
-    identifier: identifierNodes[0].textContent || "",
+    title: titleNodes[0]?.textContent || "",
+    creator: creatorNodes[0]?.textContent || "",
+    language: languageNodes[0]?.textContent || "",
+    publisher: publisherNodes[0]?.textContent || "",
+    identifier: identifierNodes[0]?.textContent || "",
     others: [],
   };
 }
