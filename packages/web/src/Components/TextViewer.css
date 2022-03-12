@@ -1,0 +1,8 @@
+.text__viewer {
+  padding: 0 1rem;
+}
+
+.text__viewer {
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}

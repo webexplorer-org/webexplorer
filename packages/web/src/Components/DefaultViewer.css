@@ -1,0 +1,18 @@
+.default__viewer__header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 1rem;
+}
+
+.default__viewer__header h4 {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+}
+
+.default__viewer__header select {
+  display: inline-block;
+  margin-right: 1rem;
+  padding: 0.5rem;
+}

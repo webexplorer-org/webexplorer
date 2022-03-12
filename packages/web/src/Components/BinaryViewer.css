@@ -1,0 +1,12 @@
+.binary__viewer {
+  padding: 0 1rem;
+}
+
+.binary__viewer {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+}
+
+.binary__viewer div {
+  text-align: center;
+}

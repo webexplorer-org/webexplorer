@@ -25,3 +25,6 @@ preview = 预览
 project-privacy-statement = 本网站是个人项目，目的是为了在未安装应用的情况下预览某些特定文件，并不会上传或者保存任何文件，请勿当作云存储使用。
 support-and-feedback-statement = 项目并未经过完整测试，在打开特定文件时可能会遇到问题，特别是巨大的文件。如果你遇到任何问题，可在Github留言获得支持，但并不保证问题会立即得到解决。
 offline-support-statement = 本网站加载完成后可以支持无网络时离线使用，除非是重装浏览器或者清空浏览器存储。
+default-viewer = 默认预览
+text = 文本
+binary = 二进制

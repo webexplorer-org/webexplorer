@@ -25,3 +25,6 @@ preview = Preview
 project-privacy-statement = This website is a personal project. It's build for previewing files, especially when you get some files and you don't have any applications to open it. Do note that it won't upload or save your files to any places, don't use this as cloud storage.
 support-and-feedback-statement = Since it's not fully tested, it might have problems when opening some files, especially when the file is huge. If you find any problems, you can create an issue at Github, there's no guarantee that it will be fixed immediately though.
 offline-support-statement = Once this website is fully loaded, it should be able to work offline if you don't reinstall your browser or clear your browser storage.
+default-viewer = Default Viewer
+text = Text
+binary = Binary

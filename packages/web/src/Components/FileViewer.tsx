@@ -11,6 +11,7 @@ const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
 const EPubViewer = React.lazy(() => import("./EPubViewer"));
 const MobiViewer = React.lazy(() => import("./MobiViewer"));
 const TorrentViewer = React.lazy(() => import("./TorrentViewer"));
+const DefaultViewer = React.lazy(() => import("./DefaultViewer"));
 
 export interface FileViewerProps {
   file: File;
@@ -58,11 +59,7 @@ export function FileViewer(props: FileViewerProps) {
       viewer = <TorrentViewer file={file} />;
       break;
     default:
-      viewer = (
-        <div>
-          Unsupported File: {file.name} {fileType}
-        </div>
-      );
+      viewer = <DefaultViewer file={file} />;
   }
 
   useDocumentTitle({ title: file.name });
