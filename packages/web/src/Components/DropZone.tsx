@@ -39,7 +39,7 @@ export function DropZone(props: DropZoneProps) {
           <p>
             <a
               target="_blank"
-              href="https://github.com/exploreronweb/webexplorer/issues/new"
+              href="https://github.com/exploreronweb/webexplorer/issues"
               rel="noreferrer"
             >
               GitHub

@@ -28,3 +28,4 @@ offline-support-statement = 本网站加载完成后可以支持无网络时离�
 default-viewer = 默认预览
 text = 文本
 binary = 二进制
+file-is-too-large = 文件太大，无法打开

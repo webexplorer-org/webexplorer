@@ -11,6 +11,8 @@ const ThreeViewer = React.lazy(() => import("./ThreeViewer"));
 const EPubViewer = React.lazy(() => import("./EPubViewer"));
 const MobiViewer = React.lazy(() => import("./MobiViewer"));
 const TorrentViewer = React.lazy(() => import("./TorrentViewer"));
+const VideoViewer = React.lazy(() => import("./VideoViewer"));
+const ImageViewer = React.lazy(() => import("./ImageViewer"));
 const DefaultViewer = React.lazy(() => import("./DefaultViewer"));
 
 export interface FileViewerProps {
@@ -57,6 +59,21 @@ export function FileViewer(props: FileViewerProps) {
       break;
     case "application/x-bittorrent":
       viewer = <TorrentViewer file={file} />;
+      break;
+    case "video/mp4":
+    case "video/webm":
+    case "video/ogg":
+    case "video/mov":
+    case "video/quicktime":
+      viewer = <VideoViewer file={file} />;
+      break;
+    case "image/png":
+    case "image/jpeg":
+    case "image/jpg":
+    case "image/webp":
+    case "image/apng":
+    case "image/bmp":
+      viewer = <ImageViewer file={file} />;
       break;
     default:
       viewer = <DefaultViewer file={file} />;

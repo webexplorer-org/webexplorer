@@ -10,19 +10,32 @@ export interface DefaultViewerProps {
 
 export type FallbackViewer = "BinaryViewer" | "TextViewer";
 
+export const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 export function DefaultViewer(props: DefaultViewerProps) {
   const { file } = props;
   const [fallbackViewer, setFallbackViewer] =
     useState<FallbackViewer>("TextViewer");
 
   let viewer: ReactNode | null = null;
-  switch (fallbackViewer) {
-    case "BinaryViewer":
-      viewer = <BinaryViewer file={file} />;
-      break;
-    case "TextViewer":
-      viewer = <TextViewer file={file} />;
-      break;
+  if (file.size > MAX_FILE_SIZE) {
+    viewer = (
+      <div>
+        <p className="text__center">
+          <Localized id="file-is-too-large">File is too large</Localized>
+        </p>
+        <p className="text__center">{file.type}</p>
+      </div>
+    );
+  } else {
+    switch (fallbackViewer) {
+      case "BinaryViewer":
+        viewer = <BinaryViewer file={file} />;
+        break;
+      case "TextViewer":
+        viewer = <TextViewer file={file} />;
+        break;
+    }
   }
 
   return (

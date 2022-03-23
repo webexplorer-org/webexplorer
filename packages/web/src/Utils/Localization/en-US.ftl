@@ -28,3 +28,4 @@ offline-support-statement = Once this website is fully loaded, it should be able
 default-viewer = Default Viewer
 text = Text
 binary = Binary
+file-is-too-large = File is too large
